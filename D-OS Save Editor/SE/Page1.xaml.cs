@@ -14,9 +14,10 @@ namespace D_OS_Save_Editor
     /// <summary>
     /// Interaction logic for Inventory.xaml
     /// </summary>
-    public partial class InventoryTab
+    public partial class Page1
     {
         private Player _player;
+        private List<ItemTemplate> _NewItems;
 
         private Brush DefaultTextBoxBorderBrush { get; }
         private Brush[] _itemRarityColor =
@@ -33,7 +34,18 @@ namespace D_OS_Save_Editor
             }
         }
 
-        public InventoryTab()
+        public List<ItemTemplate> NewItems
+        {
+            get => _NewItems;
+
+            set
+            {
+                _NewItems = value;
+                UpdateForm();
+            }
+        }
+
+        public Page1()
         {
             InitializeComponent();
             DefaultTextBoxBorderBrush = AmountTextBox.BorderBrush;
@@ -44,12 +56,12 @@ namespace D_OS_Save_Editor
         public void UpdateForm()
         {
             ItemsListBox.Items.Clear();
-            foreach (var i in Player.Items)
+            foreach (var i in _NewItems)
                 ItemsListBox.Items.Add(new ListBoxItem
                 {
-                    Content = i.StatsName,
+                    Content = i.Name,
                     Tag = i.ItemSort,
-                    Foreground = _itemRarityColor[(int)i.ItemRarity]
+                    Foreground = _itemRarityColor[0]
                 });
 
             // check filter
@@ -60,7 +72,7 @@ namespace D_OS_Save_Editor
             }
 
             // clear all text boxes
-            foreach(var i in ValueWrapPanel.Children)
+            foreach (var i in ValueWrapPanel.Children)
             {
                 if (i is TextBox t)
                     t.Text = "";
@@ -152,7 +164,7 @@ namespace D_OS_Save_Editor
             LevelTextBox.Text = item.Stats?.Level ?? "";
 
             // combobox
-            RarityComboBox.SelectedIndex = (int) item.ItemRarity;
+            RarityComboBox.SelectedIndex = (int)item.ItemRarity;
 
             // generation
             if (item.Generation != null)
@@ -172,20 +184,20 @@ namespace D_OS_Save_Editor
                 }
             }
         }
-        
+
         private void CheckboxEventSetter_OnClick(object sender, RoutedEventArgs e)
         {
             var ckb = sender as CheckBox;
             if (!(ckb?.Tag is ItemSortType))
                 return;
 
-            if ((ItemSortType) ckb.Tag == ItemSortType.Other)
+            if ((ItemSortType)ckb.Tag == ItemSortType.Other)
             {
                 foreach (ListBoxItem i in ItemsListBox.Items)
                 {
-                    if ((ItemSortType) i.Tag == ItemSortType.Item || (ItemSortType) i.Tag == ItemSortType.Unique ||
-                        (ItemSortType) i.Tag == ItemSortType.Other)
-                        i.Visibility = ckb.IsChecked == true && !IsFilteredOutByText(i.Content as string) ? Visibility.Visible:Visibility.Collapsed;
+                    if ((ItemSortType)i.Tag == ItemSortType.Item || (ItemSortType)i.Tag == ItemSortType.Unique ||
+                        (ItemSortType)i.Tag == ItemSortType.Other)
+                        i.Visibility = ckb.IsChecked == true && !IsFilteredOutByText(i.Content as string) ? Visibility.Visible : Visibility.Collapsed;
                 }
             }
             else
@@ -255,9 +267,9 @@ namespace D_OS_Save_Editor
                     item.Vitality = VitalityTextBox.Text;
                     item.MaxVitalityPatchCheck = MaxVitalityPatchCheckTextBox.Text;
                 }
-                
+
                 if (allowedChanges.Contains(nameof(item.ItemRarity)))
-                    item.ItemRarity = (Item.ItemRarityType) RarityComboBox.SelectedIndex;
+                    item.ItemRarity = (Item.ItemRarityType)RarityComboBox.SelectedIndex;
 
                 if (allowedChanges.Contains(nameof(item.Stats)))
                 {
@@ -310,11 +322,11 @@ namespace D_OS_Save_Editor
                 Player.Items[ItemsListBox.SelectedIndex] = item;
 
                 // change colour
-                ((ListBoxItem) ItemsListBox.Items[ItemsListBox.SelectedIndex]).Foreground =
-                    _itemRarityColor[(int) item.ItemRarity];
+                ((ListBoxItem)ItemsListBox.Items[ItemsListBox.SelectedIndex]).Foreground =
+                    _itemRarityColor[(int)item.ItemRarity];
 
                 var tooltip = new ToolTip { Content = "Changes have been applied!" };
-                ((Button) sender).ToolTip = tooltip;
+                ((Button)sender).ToolTip = tooltip;
                 tooltip.Opened += async delegate (object o, RoutedEventArgs args)
                 {
                     var s = o as ToolTip;
@@ -344,28 +356,28 @@ namespace D_OS_Save_Editor
                 case "Add":
                     // try pre-determine equipment type
                     var predictedKeyword = "";
-                    var boostsString= BoostsListBox.Items.Cast<string>().Aggregate("", (current, s) => current + s);
+                    var boostsString = BoostsListBox.Items.Cast<string>().Aggregate("", (current, s) => current + s);
                     boostsString += Player.Items[ItemsListBox.SelectedIndex].StatsName.ToLower();
 
-                    if (boostsString!="")
-                    foreach (var s in DataTable.GenerationBoostsFilterNames)
-                    {
-                        if (!boostsString.Contains(s)) continue;
-                        switch (s)
+                    if (boostsString != "")
+                        foreach (var s in DataTable.GenerationBoostsFilterNames)
                         {
-                            case "arm":
-                                predictedKeyword += "armor ";
-                                break;
-                            case "wpn":
-                                predictedKeyword += "weapon ";
-                                break;
-                            default:
-                                predictedKeyword += s + " ";
-                                break;
+                            if (!boostsString.Contains(s)) continue;
+                            switch (s)
+                            {
+                                case "arm":
+                                    predictedKeyword += "armor ";
+                                    break;
+                                case "wpn":
+                                    predictedKeyword += "weapon ";
+                                    break;
+                                default:
+                                    predictedKeyword += s + " ";
+                                    break;
+                            }
                         }
-                    }
 
-                    var dlg=new AddBoostDialog(predictedKeyword);
+                    var dlg = new AddBoostDialog(predictedKeyword);
                     dlg.ShowDialog();
                     if (dlg.DialogResult == true)
                         BoostsListBox.Items.Add(dlg.BoostText);
@@ -377,6 +389,18 @@ namespace D_OS_Save_Editor
                     BoostsListBox.Items.RemoveAt(BoostsListBox.SelectedIndex);
                     break;
             }
+        }
+
+        private void Test(object sender, RoutedEventArgs e) {
+
+            Console.WriteLine("TEST HERE");
+            Item addItem = new Item();
+
+            Player.ItemChanges.Add("-1",
+                        new ItemChange(addItem, ChangeType.Add));
+
+            return;
+
         }
 
         private void SearchTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
@@ -395,16 +419,6 @@ namespace D_OS_Save_Editor
                 }
                 i.Visibility = visiblily;
             }
-        }
-
-        private void Test(object sender, RoutedEventArgs e)
-        {
-
-            Console.WriteLine("TEST HERE");
-            Item addItem = new Item();
-
-            return;
-
         }
     }
 }

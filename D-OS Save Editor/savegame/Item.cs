@@ -68,6 +68,11 @@ namespace D_OS_Save_Editor
         }
 
         /// <summary>
+        /// Xml node name: Description of the item (Xml attribute id: Description)
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
         /// Xml node name: Indicates if the item is a key or not.
         /// </summary>
         public string IsKey
@@ -95,7 +100,7 @@ namespace D_OS_Save_Editor
             set
             {
                 if (!XmlUtilities.IsLong(value))
-                    throw new XmlValidationException("Parenet", value);
+                    throw new XmlValidationException("Parent", value);
                 _parent = value;
             }
         }
@@ -503,6 +508,7 @@ namespace D_OS_Save_Editor
     public class ItemChange
     {
         public Item Item { get; }
+        public ItemTemplate Template { get; }
         public ChangeType ChangeType { get;}
 
         public ItemChange() { }
@@ -511,6 +517,28 @@ namespace D_OS_Save_Editor
         {
             Item = item.DeepClone();
             ChangeType = changeType;
+        }
+
+        public ItemChange(ItemTemplate item, ChangeType changeType)
+        {
+            Template = item;
+            ChangeType = changeType;
+        }
+    }
+
+    public class ItemTemplate 
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string TemplateKey { get; set; }
+        public string MaxStack { get; set; }
+        public ItemSortType ItemSort { get; set; }
+
+        public ItemTemplate(string name, string description, string TemplateKey, string maxStack) {
+            this.Name = name;
+            this.Description = description;
+            this.TemplateKey = TemplateKey;
+            this.MaxStack = maxStack;
         }
     }
 

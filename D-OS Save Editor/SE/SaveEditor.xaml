@@ -120,8 +120,11 @@
             <TabItem Header="Inventory">
                 <local:InventoryTab x:Name="InventoryTab" Margin="10"/>
             </TabItem>
+            <TabItem Header="Add Items">
+                <local:Page1 x:Name="Page1" Margin="10"/>
+            </TabItem>
 
-            <TabItem Header="Debug" Visibility="Collapsed">
+            <TabItem Header="Debug">
                 <TabItem.Resources>
                     <Style TargetType="Button">
                         <Setter Property="Width" Value="200"/>

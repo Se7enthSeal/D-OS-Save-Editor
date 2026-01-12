@@ -1,10 +1,15 @@
-﻿using System;
+﻿using LSLib.Granny.Model;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.XPath;
 
 namespace D_OS_Save_Editor
 {
@@ -16,11 +21,12 @@ namespace D_OS_Save_Editor
         private Savegame Savegame { get; set; }
         private Player[] EditingPlayers { get; set; }
 
+        private List<ItemTemplate> GameItems { get; set; }
 
         public SaveEditor(string jsonFile)
         {
             InitializeComponent();
-
+            GameItems = LoadNewItems();
             Savegame = Savegame.GetSavegameFromJson(jsonFile);
             // make a copy of players
             try
@@ -38,15 +44,149 @@ namespace D_OS_Save_Editor
             {
                 PlayerSelectionComboBox.Items.Add(p.Name);
             }
-
+            
             PlayerSelectionComboBox.SelectedIndex = 0;
         }
+
+        private List<ItemTemplate> LoadNewItems()
+        {
+            //XmlDocument doc = new XmlDocument();
+            //doc.Load($"C:\\Users\\india\\Downloads\\D-OS-Save-Editor\\D-OS Save Editor\\ItemTemplates\\Consumables.lsx");
+
+            XElement items = XElement.Load($"C:\\Users\\india\\Downloads\\D-OS-Save-Editor\\D-OS Save Editor\\ItemTemplates\\Consumables.lsx");
+
+            IEnumerable<XElement> node = items.XPathSelectElement("//node[@id='root']//children").Elements();
+
+            List<ItemTemplate> result = new List<ItemTemplate>();
+
+            string innerXMLTemplate = $"<node id=\"Item\">  " +
+                                            "<attribute id=\"Translate\" value=\"688.623 -19.9 395.7792\" type=\"12\" />  " +
+                                            "<attribute id=\"Flags\" value=\"558040\" type=\"5\" />  " +
+                                            "<attribute id=\"Level\" value=\"\" type=\"22\" />  " +
+                                            "<attribute id=\"Rotate\" value=\" 0.75  0.00  0.66 &#xD;&#xA; 0.00  1.00  0.00 &#xD;&#xA;-0.66  0.00  0.75 &#xD;&#xA;\" type=\"15\" />  " +
+                                            "<attribute id=\"Scale\" value=\"1\" type=\"6\" />  " +
+                                            "<attribute id=\"Global\" value=\"True\" type=\"19\" />  " +
+                                            "<attribute id=\"Velocity\" value=\"0 0 0\" type=\"12\" />  " +
+                                            "<attribute id=\"GoldValueOverwrite\" value=\"-1\" type=\"4\" />  " +
+                                            "<attribute id=\"UnsoldGenerated\" value=\"True\" type=\"19\" />  " +
+                                            "<attribute id=\"IsKey\" value=\"False\" type=\"19\" />  " +
+                                            "<attribute id=\"TreasureGenerated\" value=\"False\" type=\"19\" />  " +
+                                            "<attribute id=\"CurrentTemplate\" value=\"\" type=\"22\" />  " +
+                                            "<attribute id=\"CurrentTemplateType\" value=\"0\" type=\"1\" />  " +
+                                            "<attribute id=\"OriginalTemplate\" value=\"\" type=\"22\" />  " +
+                                            "<attribute id=\"OriginalTemplateType\" value=\"0\" type=\"1\" />  " +
+                                            "<attribute id=\"Stats\" value=\"\" type=\"22\" />  " +
+                                            "<attribute id=\"IsGenerated\" value=\"False\" type=\"19\" />  " +
+                                            "<attribute id=\"Inventory\" value=\"0\" type=\"5\" />  " +
+                                            "<attribute id=\"Parent\" value=\"\" type=\"5\" />  " +
+                                            "<attribute id=\"Slot\" value=\"\" type=\"3\" />  " +
+                                            "<attribute id=\"Amount\" value=\"1\" type=\"4\" />  " +
+                                            "<attribute id=\"Key\" value=\"\" type=\"22\" />  " +
+                                            "<attribute id=\"LockLevel\" value=\"1\" type=\"4\" />  " +
+                                            "<attribute id=\"SurfaceCheckTimer\" value=\"3.433501\" type=\"6\" />  " +
+                                            "<attribute id=\"Vitality\" value=\"-1\" type=\"4\" />  " +
+                                            "<attribute id=\"LifeTime\" value=\"0\" type=\"6\" />  " +
+                                            "<attribute id=\"owner\" value=\"67174548\" type=\"5\" />  " +
+                                            "<attribute id=\"ItemType\" value=\"Common\" type=\"22\" />  " +
+                                            "<attribute id=\"MaxVitalityPatchCheck\" value=\"-1\" type=\"4\" />  " +
+                                            "<children>    " +
+                                                "<node id=\"ItemMachine\" />    " +
+                                                "<node id=\"VariableManager\" />    " +
+                                                "<node id=\"StatusManager\" />  " +
+                                            "</children>" +
+                                       "</node>";
+
+            //Console.WriteLine("NODES: "+ node.Count());
+
+            foreach (var itemToAdd in node) 
+            {
+                //Console.WriteLine(itemToAdd.ToString(SaveOptions.None));
+                if(GetAttr(itemToAdd, "CanBePickedUp") == "False") continue;
+
+                string name = GetAttr(itemToAdd, "Name");
+                string description = GetAttr(itemToAdd, "Description");
+                string templateKey = GetAttr(itemToAdd, "MapKey");
+                string maxStack = GetAttr(itemToAdd, "maxStackAmount");
+
+                //Console.WriteLine(itemToAdd.ToString(SaveOptions.None));
+                ItemTemplate item = new ItemTemplate(name, description, templateKey, maxStack);
+
+
+                if (DataTable.GoldNames.Contains(item.Name.ToLower()))
+                    item.ItemSort = ItemSortType.Gold;
+                else 
+                {
+                    var nameParts = item.Name.ToLower().Split('_');
+
+                    if (nameParts[0] == "wpn" &&
+                        DataTable.ArrowTypeNames.Contains(nameParts[1]))
+                        item.ItemSort = ItemSortType.Arrow;
+                    else
+                        switch (nameParts[0])
+                        {
+                            case "item":
+                                item.ItemSort = ItemSortType.Item;
+                                break;
+                            case "potion":
+                                item.ItemSort = ItemSortType.Potion;
+                                break;
+                            case "arm":
+                                item.ItemSort = ItemSortType.Armor;
+                                break;
+                            case "wpn":
+                                item.ItemSort = ItemSortType.Weapon;
+                                break;
+                            case "skillbook":
+                                item.ItemSort = ItemSortType.Skillbook;
+                                break;
+                            case "scroll":
+                                item.ItemSort = ItemSortType.Scroll;
+                                break;
+                            case "grn":
+                                item.ItemSort = ItemSortType.Granade;
+                                break;
+                            case "food":
+                                item.ItemSort = ItemSortType.Food;
+                                break;
+                            case "fur":
+                                item.ItemSort = ItemSortType.Furniture;
+                                break;
+                            case "loot":
+                                item.ItemSort = ItemSortType.Loot;
+                                break;
+                            case "quest":
+                                item.ItemSort = ItemSortType.Quest;
+                                break;
+                            case "tool":
+                                item.ItemSort = ItemSortType.Tool;
+                                break;
+                            case "unique":
+                                item.ItemSort = ItemSortType.Unique;
+                                break;
+                            case "book":
+                                item.ItemSort = ItemSortType.Book;
+                                break;
+                            default:
+                                item.ItemSort = ItemSortType.Other;
+                                break;
+                        }
+                }
+                result.Add(item);
+                //Console.WriteLine("--------------------------------------------------------------------------------------------");
+            }
+
+            return result;
+        }
+        string GetAttr(XElement el, string id) =>
+          el.Descendants("attribute")
+            .FirstOrDefault(a => (string)a.Attribute("id") == id)?
+            .Attribute("value")?.Value;
 
         public SaveEditor(Savegame savegame)
         {
             InitializeComponent();
             Savegame = savegame;
-
+            GameItems = LoadNewItems();
             Title = $"D-OS Save Editor: {savegame.SavegameName.Substring(0,savegame.SavegameName.Length-4)}";
 
             // make a copy of players
@@ -76,7 +216,9 @@ namespace D_OS_Save_Editor
             InventoryTab.Player = EditingPlayers[id];
             TraitsTab.Player = EditingPlayers[id];
             TalentTab.Player = EditingPlayers[id];
-
+            Page1.NewItems = GameItems;
+            Page1.Player = EditingPlayers[id];
+            
             if (EditingPlayers[id].Name == "Henchman")
             {
                 //TraitsTab.IsEnabled = false;
@@ -100,7 +242,7 @@ namespace D_OS_Save_Editor
                 TalentTab.SaveEdits();
 
                 // progress indicator
-                var progressIndicator = new ProgressIndicator("Saving", false) { Owner = Application.Current.MainWindow };
+                var progressIndicator = new ProgressIndicator("Saving", false) { Owner = Application.Current.MainWindow};
                 var progress = new Progress<string>();
                 progress.ProgressChanged += (o, s) =>
                 {
