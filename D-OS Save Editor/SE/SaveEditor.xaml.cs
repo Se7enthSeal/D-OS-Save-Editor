@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -50,10 +51,10 @@ namespace D_OS_Save_Editor
 
         private List<ItemTemplate> LoadNewItems()
         {
-            //XmlDocument doc = new XmlDocument();
-            //doc.Load($"C:\\Users\\india\\Downloads\\D-OS-Save-Editor\\D-OS Save Editor\\ItemTemplates\\Consumables.lsx");
+            string path = Path.Combine(AppContext.BaseDirectory, "ItemTemplates", "Consumables.lsx");
 
-            XElement items = XElement.Load($"C:\\Users\\india\\Downloads\\D-OS-Save-Editor\\D-OS Save Editor\\ItemTemplates\\Consumables.lsx");
+            //XElement items = XElement.Load($"C:\\Users\\india\\Downloads\\D-OS-Save-Editor\\D-OS Save Editor\\ItemTemplates\\Consumables.lsx");
+            XElement items = XElement.Load(path);
 
             IEnumerable<XElement> node = items.XPathSelectElement("//node[@id='root']//children").Elements();
 
@@ -104,12 +105,12 @@ namespace D_OS_Save_Editor
                 if(GetAttr(itemToAdd, "CanBePickedUp") == "False") continue;
 
                 string name = GetAttr(itemToAdd, "Name");
+                string stats = GetAttr(itemToAdd, "Stats");
                 string description = GetAttr(itemToAdd, "Description");
                 string templateKey = GetAttr(itemToAdd, "MapKey");
                 string maxStack = GetAttr(itemToAdd, "maxStackAmount");
 
-                //Console.WriteLine(itemToAdd.ToString(SaveOptions.None));
-                ItemTemplate item = new ItemTemplate(name, description, templateKey, maxStack);
+                ItemTemplate item = new ItemTemplate(name, description, templateKey, maxStack, stats);
 
 
                 if (DataTable.GoldNames.Contains(item.Name.ToLower()))
@@ -281,6 +282,7 @@ namespace D_OS_Save_Editor
             StatsTab.UpdateForm();
             AbilitiesTab.UpdateForm();
             InventoryTab.UpdateForm();
+            Page1.UpdateForm();
         }
 
         private void SaveEditor_OnClosed(object sender, EventArgs e)

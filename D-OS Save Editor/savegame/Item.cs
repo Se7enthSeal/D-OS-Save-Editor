@@ -508,7 +508,7 @@ namespace D_OS_Save_Editor
     public class ItemChange
     {
         public Item Item { get; }
-        public ItemTemplate Template { get; }
+        public ItemTemplate ItemTemplate { get; }
         public ChangeType ChangeType { get;}
 
         public ItemChange() { }
@@ -521,25 +521,60 @@ namespace D_OS_Save_Editor
 
         public ItemChange(ItemTemplate item, ChangeType changeType)
         {
-            Template = item;
+            ItemTemplate = item.DeepClone();
             ChangeType = changeType;
         }
+
+
+
     }
 
     public class ItemTemplate 
     {
         public string Name { get; set; }
+        public string Stats { get; set; }
         public string Description { get; set; }
         public string TemplateKey { get; set; }
         public string MaxStack { get; set; }
         public ItemSortType ItemSort { get; set; }
+        public int Amount { get; set; }
 
-        public ItemTemplate(string name, string description, string TemplateKey, string maxStack) {
+        public ItemTemplate(string name, string description, string TemplateKey, string maxStack, string stats) {
             this.Name = name;
             this.Description = description;
             this.TemplateKey = TemplateKey;
             this.MaxStack = maxStack;
+            this.Stats = stats;
+            this.Amount = 0;
         }
+
+        public ItemTemplate(string name, string description, string TemplateKey, string maxStack, string stats, int amount)
+        {
+            this.Name = name;
+            this.Description = description;
+            this.TemplateKey = TemplateKey;
+            this.MaxStack = maxStack;
+            this.Stats = stats;
+            this.Amount = amount;
+        }
+
+        public ItemTemplate DeepClone() {
+            try
+            {
+                var item = (ItemTemplate)MemberwiseClone();
+                return item;
+            }
+
+            catch (NullReferenceException ex)
+
+            {
+                throw new ObjectNullException(ex, "Cannot clone item, because one or more list/dictionary object is null.", this);
+            }
+
+            
+
+        }
+
     }
 
     public class ItemParserException : Exception

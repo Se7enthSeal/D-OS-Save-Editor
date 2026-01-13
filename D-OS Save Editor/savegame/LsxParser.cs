@@ -298,102 +298,6 @@ namespace D_OS_Save_Editor
             return item;
         }
 
-
-        public static Item ParseItemFromGameList(XmlNode node)
-        {
-            var item = new Item();
-#if DEBUG
-            item.Xml = XmlUtilities.BeautifyXml(node);
-#endif
-            try
-            {
-
-                //item.Flags = node.SelectSingleNode("attribute [@id='Flags']").Attributes[1].Value;
-                //item.IsKey = node.SelectSingleNode("attribute [@id='IsKey']").Attributes[1].Value;
-                item.StatsName = node.SelectSingleNode("attribute [@id='Stats']").Attributes[1].Value;
-                item.Parent = node.SelectSingleNode("attribute [@id='Parent']").Attributes[1].Value;
-                //item.Slot = node.SelectSingleNode("attribute [@id='Slot']").Attributes[1].Value;
-                item.Amount = "1";
-                item.IsGenerated = "False";
-                item.LockLevel = "1";
-                item.Vitality = "-1";
-                item.ItemType = node.SelectSingleNode("attribute [@id='ItemType']").Attributes[1].Value;
-                item.MaxVitalityPatchCheck = "-1";
-                item.MaxDurabilityPatchCheck = "";
-            }
-            catch (NullReferenceException e)
-            {
-                throw new ObjectNullException(e, "One or more item nodes are not found.");
-            }
-
-            // sort item
-            if (item.IsKey == "True")
-                item.ItemSort = ItemSortType.Key;
-            else if (DataTable.GoldNames.Contains(item.StatsName.ToLower()))
-                item.ItemSort = ItemSortType.Gold;
-            else
-            {
-                var nameParts = item.StatsName.ToLower().Split('_');
-
-                if (nameParts[0] == "wpn" &&
-                    DataTable.ArrowTypeNames.Contains(nameParts[1]))
-                    item.ItemSort = ItemSortType.Arrow;
-                else
-                    switch (nameParts[0])
-                    {
-                        case "item":
-                            item.ItemSort = ItemSortType.Item;
-                            break;
-                        case "potion":
-                            item.ItemSort = ItemSortType.Potion;
-                            break;
-                        case "arm":
-                            item.ItemSort = ItemSortType.Armor;
-                            break;
-                        case "wpn":
-                            item.ItemSort = ItemSortType.Weapon;
-                            break;
-                        case "skillbook":
-                            item.ItemSort = ItemSortType.Skillbook;
-                            break;
-                        case "scroll":
-                            item.ItemSort = ItemSortType.Scroll;
-                            break;
-                        case "grn":
-                            item.ItemSort = ItemSortType.Granade;
-                            break;
-                        case "food":
-                            item.ItemSort = ItemSortType.Food;
-                            break;
-                        case "fur":
-                            item.ItemSort = ItemSortType.Furniture;
-                            break;
-                        case "loot":
-                            item.ItemSort = ItemSortType.Loot;
-                            break;
-                        case "quest":
-                            item.ItemSort = ItemSortType.Quest;
-                            break;
-                        case "tool":
-                            item.ItemSort = ItemSortType.Tool;
-                            break;
-                        case "unique":
-                            item.ItemSort = ItemSortType.Unique;
-                            break;
-                        case "book":
-                            item.ItemSort = ItemSortType.Book;
-                            break;
-                        default:
-                            item.ItemSort = ItemSortType.Other;
-                            break;
-                    }
-            }
-
-
-            return item;
-        }
-
-
         public static Meta ParseMeta(XmlDocument doc)
         {
             var metaData = doc.DocumentElement?.SelectSingleNode("./region [@id='MetaData']/node [@id='MetaData']/children/node [@id='MetaData']");
@@ -515,13 +419,6 @@ namespace D_OS_Save_Editor
             // get all items belong to this player
             // find item data
             var inventoryData = doc.DocumentElement.SelectNodes($"//attribute [@id='Parent'] [@value='{player.InventoryId}']");
-
-            var tempItem = new ItemTemplate("CON_Herb_Mushroom_A","", "0106e3c1-bd81-4118-8a28-59c6dc941feb", "50");
-            string emptySlot = getEmptySlot(player);
-            string emptyItem = "" + emptySlot;
-            player.ItemChanges.Add(emptyItem,
-                        new ItemChange(tempItem, ChangeType.Add));
-
             
             foreach (var ic in player.ItemChanges)
             {
@@ -640,10 +537,10 @@ namespace D_OS_Save_Editor
 
                 if (ic.Value.ChangeType == ChangeType.Add)
                 {
-                    string mapKey = "2cda275d-2aea-4e57-970a-0cdb9c342b86";
-                    string stats = "CON_Drink_Mug_A_Beer";
-                    string empSlot = getEmptySlot(player);
-                    string amount = "13";
+                    string mapKey = ic.Value.ItemTemplate.TemplateKey;
+                    string stats = ic.Value.ItemTemplate.Stats;
+                    string empSlot = ic.Key.ToString();
+                    string amount = ic.Value.ItemTemplate.Amount.ToString();
 
                     string rawXml = $@"<node id=""Item"">
 	                                        <attribute id=""Translate"" value=""0 0 0"" type=""12"" />
@@ -696,25 +593,6 @@ namespace D_OS_Save_Editor
                         OmitXmlDeclaration = true,
                         NewLineOnAttributes = false
                     };
-                    //XmlDocumentFragment fragment = doc.CreateDocumentFragment();
-                    //fragment.InnerXml = rawXml;
-
-
-                    //XDocument xdoc = doc.ToXDocument();
-
-                    //XElement newItem = XElement.Parse(rawXml);
-
-                    //using (XmlWriter writer = XmlWriter.Create("DOSEE_output.xml", settings1))
-                    //{
-                    //    xdoc.Save(writer);
-                    //    writer.Close();
-                    //    writer.Dispose();
-                    //}
-                    
-
-                    //XElement itemsChildren = xdoc.XPathSelectSingleNode("//save/region[@id = 'Items']/node[@id='Items']/children/node[@id='ItemFactory']/children/node[@id='Items']/children");
-
-                    //XElement targetChildren0 = xdoc.XPathSelectElement("//region[@id='Items']/node[@id='Items']/children/node[@id='ItemFactory']/children/node[@id='Items']/children");
 
                     XmlNode targetChildren = doc.SelectSingleNode("//region[@id='Items']/node[@id='Items']/children/node[@id='ItemFactory']/children/node[@id='Items']/children");
 
@@ -734,56 +612,6 @@ namespace D_OS_Save_Editor
                         lastFiltered.ParentNode.InsertAfter(imported, lastFiltered);
                     }
 
-                    //foreach (XmlNode item in filteredItems)
-                    //{
-                    //    var t = item.OuterXml;
-
-                    //    //File.WriteAllText($@"DOSEE_output_specific_{player.InventoryId}.xml", t);
-
-                    //}
-                    //var filteredItems = targetChildren.Elements("node")
-                    //    .Where(n => (string)n.Attribute("id") == "Item")
-                    //    .Where(n => n.Element("attribute") != null &&
-                    //                n.Elements("attribute").Any(c => (string)c.Attribute("id") == "Parent" && (string)c.Attribute("value") == (string)player.InventoryId)
-                    //                )
-                    //    .ToList();
-
-                    //using (XmlWriter writer = XmlWriter.Create($@"DOSEE_output_specific_{player.InventoryId}.xml", settings))
-                    //{
-                    //    foreach (var element in filteredItems)
-                    //    {
-                    //        writer.WriteNode(element,false); 
-                    //    }
-                    //}
-
-                    //Console.WriteLine(
-                    //                player.InventoryId.ToString() + " : Before Add : " + targetChildren.Elements("node").Count()
-                    //            );
-                    //string innerXml = newItem.ToString();
-
-                    //XElement lastFiltered = filteredItems.LastOrDefault();
-
-                    //if (lastFiltered != null) lastFiltered.AddAfterSelf(new XElement(newItem));
-
-                    //Console.WriteLine(
-                    //                player.InventoryId.ToString() + " : After Add : " + targetChildren.Elements("node").Count()
-                    //            );
-
-                    //using (XmlWriter writer = XmlWriter.Create("DOSEE_output_afterAdd.xml", settings1))
-                    //{
-                    //    xdoc.Save(writer);
-                    //}
-                    //doc = xdoc.ToXmlDocument();
-                    //targetChildren.Add(newItem);
-
-                    //var parentItemList = inventoryData[0].ParentNode.ParentNode;
-
-                    //var temp = new XmlDocument();
-                    //temp.LoadXml(rawXml);
-
-                    //var imported = doc.ImportNode(temp.DocumentElement, true);
-                    //parentItemList.AppendChild(imported);
-
                 }
 
             }
@@ -792,25 +620,6 @@ namespace D_OS_Save_Editor
             return doc;
         }
         
-
-        public static string getEmptySlot(Player player)
-        {
-            //Random random = new Random();
-            //return random.Next(1000,2500).ToString();
-
-            if (player.InventoryId == "335610004") {
-                Console.WriteLine("FUCK");
-            }
-
-            int emptySlot = 20;
-            while (emptySlot < int.MaxValue) {
-                if (!player.SlotsOccupation[emptySlot]) {
-                    player.SlotsOccupation[emptySlot] = true;
-                    return emptySlot.ToString();
-                } else emptySlot++;
-            }
-            throw new Exception("Can't find empty slot");
-        }
         #endregion
     }
 

@@ -18,6 +18,7 @@ namespace D_OS_Save_Editor
     {
         private Player _player;
         private List<ItemTemplate> _NewItems;
+        private List<ItemTemplate> _AddedItems;
 
         private Brush DefaultTextBoxBorderBrush { get; }
         private Brush[] _itemRarityColor =
@@ -45,12 +46,24 @@ namespace D_OS_Save_Editor
             }
         }
 
+        public List<ItemTemplate> AddedItems
+        {
+            get => _AddedItems;
+
+            set
+            {
+                _AddedItems = value;
+                UpdateForm();
+            }
+        }
+
         public Page1()
         {
             InitializeComponent();
             DefaultTextBoxBorderBrush = AmountTextBox.BorderBrush;
 
             RarityComboBox.ItemsSource = Enum.GetValues(typeof(Item.ItemRarityType)).Cast<Item.ItemRarityType>();
+            _AddedItems = new List<ItemTemplate>();
         }
 
         public void UpdateForm()
@@ -63,6 +76,16 @@ namespace D_OS_Save_Editor
                     Tag = i.ItemSort,
                     Foreground = _itemRarityColor[0]
                 });
+
+            SelectedItemsListbox.Items.Clear();
+
+            //_AddedItems.Add(new ItemTemplate("name", "Considered a beverage by the hale and suicidal Dwarves of the frozen north.", "23276KEY", "999"));
+
+            if (_AddedItems != null)
+            {
+                foreach (var i in _AddedItems)
+                    SelectedItemsListbox.Items.Add(i);
+            }
 
             // check filter
             foreach (var i in ShowWrapPanel.Children)
@@ -77,6 +100,19 @@ namespace D_OS_Save_Editor
                 if (i is TextBox t)
                     t.Text = "";
             }
+        }
+
+        private void DecrementButton_Click(object sender, RoutedEventArgs e) {
+
+            var button = sender as FrameworkElement;
+            if (button == null)
+                return;
+
+            var item = button.DataContext as ItemTemplate;
+            if (item == null) return;
+            Console.WriteLine("");
+            Console.WriteLine("");
+
         }
 
         private void TextBoxEventSetter_OnLostFocus(object sender, RoutedEventArgs e)
@@ -101,88 +137,39 @@ namespace D_OS_Save_Editor
         private void ItemsListBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             // clear list boxes
-            BoostsListBox.Items.Clear();
-            PermBoostsListBox.Items.Clear();
-
             var lb = sender as ListBox;
             if (lb.SelectedIndex < 0)
                 return;
-            var item = Player.Items[lb.SelectedIndex];
+            var item = _NewItems[lb.SelectedIndex];
 
+#if DEBUG
+            Console.WriteLine("Item name: "+item.Name.ToString());
+            Console.WriteLine("Item Mapkey: "+item.TemplateKey.ToString());
+            if (item.Description != null) Console.WriteLine("Item Description: " + item.Description.ToString());
+            else Console.WriteLine("Description Null");
+            if (item.MaxStack != null) Console.WriteLine("Max Stack: " + item.MaxStack.ToString());
+            else Console.WriteLine("MaxStack Null");
+#endif
+            _AddedItems.Add(item.DeepClone());
+            UpdateForm();
 
-            var allowedChanges = item.GetAllowedChangeType();
+            //var allowedChanges = item.GetAllowedChangeType();
             #region enable disable controls
 
-            if (allowedChanges.Contains(nameof(item.Vitality)))
-            {
-                VitalityTextBox.IsEnabled = true;
-                MaxVitalityPatchCheckTextBox.IsEnabled = true;
-            }
-            else
-            {
-                VitalityTextBox.IsEnabled = false;
-                MaxVitalityPatchCheckTextBox.IsEnabled = false;
-            }
+            //RarityComboBox.IsEnabled = allowedChanges.Contains(nameof(item.ItemRarity));
+            AmountTextBox.IsEnabled = true;
 
-            RarityComboBox.IsEnabled = allowedChanges.Contains(nameof(item.ItemRarity));
-            AmountTextBox.IsEnabled = allowedChanges.Contains(nameof(item.Amount));
-            LockLevelTextBox.IsEnabled = allowedChanges.Contains(nameof(item.LockLevel));
-            BoostsListBox.IsEnabled = allowedChanges.Contains(nameof(item.Generation));
-
-            if (allowedChanges.Contains(nameof(item.Stats)))
-            {
-                DurabilityTextBox.IsEnabled = true;
-                MaxDurabilityPatchCheckTextBox.IsEnabled = false;
-                DurabilityCounterTextBox.IsEnabled = true;
-                RepairDurabilityPenaltyTextBox.IsEnabled = true;
-                LevelTextBox.IsEnabled = true;
-                PermBoostsListBox.IsEnabled = true;
-            }
-            else
-            {
-                DurabilityTextBox.IsEnabled = false;
-                MaxDurabilityPatchCheckTextBox.IsEnabled = false;
-                DurabilityCounterTextBox.IsEnabled = false;
-                RepairDurabilityPenaltyTextBox.IsEnabled = false;
-                LevelTextBox.IsEnabled = false;
-                PermBoostsListBox.IsEnabled = false;
-            }
             #endregion
 
 #if DEBUG && LOG_ITEMXML
             Console.WriteLine(item.Xml);
 #endif
             // textbox contents
-            AmountTextBox.Text = item.Amount;
-            LockLevelTextBox.Text = item.LockLevel;
-            VitalityTextBox.Text = item.Vitality;
-            MaxVitalityPatchCheckTextBox.Text = item.MaxVitalityPatchCheck;
-            DurabilityTextBox.Text = item.Stats?.Durability ?? "";
-            DurabilityCounterTextBox.Text = item.Stats?.DurabilityCounter ?? "";
-            MaxDurabilityPatchCheckTextBox.Text = item.MaxDurabilityPatchCheck;
-            RepairDurabilityPenaltyTextBox.Text = item.Stats?.RepairDurabilityPenalty ?? "";
-            LevelTextBox.Text = item.Stats?.Level ?? "";
+            //AmountTextBox.Text = item.Amount;
 
             // combobox
-            RarityComboBox.SelectedIndex = (int)item.ItemRarity;
+            //RarityComboBox.SelectedIndex = (int)item.ItemRarity;
 
-            // generation
-            if (item.Generation != null)
-            {
-                foreach (var m in item.Generation.Boosts)
-                {
-                    BoostsListBox.Items.Add(m);
-                }
-            }
-
-            // stats
-            if (item.Stats != null)
-            {
-                foreach (var m in item.Stats.PermanentBoost)
-                {
-                    PermBoostsListBox.Items.Add($"{m.Key} - {m.Value}");
-                }
-            }
         }
 
         private void CheckboxEventSetter_OnClick(object sender, RoutedEventArgs e)
@@ -248,82 +235,18 @@ namespace D_OS_Save_Editor
 
         private void ApplyChangesButton_OnClick(object sender, RoutedEventArgs e)
         {
-            if (ItemsListBox.SelectedIndex < 0)
-                return;
-
+            
             try
             {
-                // apply changes to a copy of the item
-                var item = Player.Items[ItemsListBox.SelectedIndex].DeepClone();
-                var allowedChanges = item.GetAllowedChangeType();
-                if (allowedChanges.Contains(nameof(item.Amount)))
-                    item.Amount = AmountTextBox.Text;
-
-                if (allowedChanges.Contains(nameof(item.LockLevel)))
-                    item.LockLevel = LockLevelTextBox.Text;
-
-                if (allowedChanges.Contains(nameof(item.Vitality)))
+                if (_AddedItems.Count < 1) return;
+                foreach (var i in _AddedItems) 
                 {
-                    item.Vitality = VitalityTextBox.Text;
-                    item.MaxVitalityPatchCheck = MaxVitalityPatchCheckTextBox.Text;
+                    string slot = getEmptySlot(_player);
+                    ItemTemplate temp = new ItemTemplate(i.Name,i.Description,i.TemplateKey,i.MaxStack,i.Stats,4);
+                    ItemChange change = new ItemChange(temp,ChangeType.Add);
+                    _player.ItemChanges.Add(slot,change);
+                
                 }
-
-                if (allowedChanges.Contains(nameof(item.ItemRarity)))
-                    item.ItemRarity = (Item.ItemRarityType)RarityComboBox.SelectedIndex;
-
-                if (allowedChanges.Contains(nameof(item.Stats)))
-                {
-                    item.Stats.Durability = DurabilityTextBox.Text;
-                    item.Stats.DurabilityCounter = DurabilityCounterTextBox.Text;
-                    item.Stats.RepairDurabilityPenalty = RepairDurabilityPenaltyTextBox.Text;
-                    item.Stats.Level = LevelTextBox.Text;
-                }
-
-                if (allowedChanges.Contains(nameof(item.Generation)))
-                {
-                    if (item.Generation == null)
-                    {
-                        //TODO if Item.Stats is null, an error will occur later on when writing xml because Geneartion.Level is taken from Stats.Level.
-                        //Since Item.Stats == null is not likely to be possible, let's handle it later on if we have an report of this case.
-                        if (item.Stats == null)
-                        {
-                            var xmlSerializer = new XmlSerializer(item.GetType());
-
-                            using (var sw = new StringWriter())
-                            {
-                                xmlSerializer.Serialize(sw, item);
-                                var er = new ErrorReporting("It is not possible to add modifier to this item yet. No changes have been applied.", $"Item.Stats Null. Cannot add item modifiers.\n\nItem XML:\n{sw}", null);
-                                er.ShowDialog();
-                            }
-                            return;
-                        }
-                        item.Generation = new Item.GenerationNode(item.StatsName, "0");
-                    }
-
-                    item.Generation.Boosts = new List<string>();
-                    foreach (string s in BoostsListBox.Items)
-                    {
-                        item.Generation.Boosts.Add(s);
-                    }
-                }
-
-                // add changes
-                if (Player.ItemChanges.ContainsKey(item.Slot))
-                {
-                    Player.ItemChanges[item.Slot] = new ItemChange(item, Player.ItemChanges[item.Slot].ChangeType);
-                }
-                else
-                {
-                    Player.ItemChanges.Add(item.Slot,
-                        new ItemChange(item, ChangeType.Modify));
-                }
-
-                // apply changes to the original item
-                Player.Items[ItemsListBox.SelectedIndex] = item;
-
-                // change colour
-                ((ListBoxItem)ItemsListBox.Items[ItemsListBox.SelectedIndex]).Foreground =
-                    _itemRarityColor[(int)item.ItemRarity];
 
                 var tooltip = new ToolTip { Content = "Changes have been applied!" };
                 ((Button)sender).ToolTip = tooltip;
@@ -349,76 +272,38 @@ namespace D_OS_Save_Editor
             }
         }
 
-        private void BoostsContextMenu_Click(object sender, RoutedEventArgs e)
-        {
-            switch (((MenuItem)sender).Header)
-            {
-                case "Add":
-                    // try pre-determine equipment type
-                    var predictedKeyword = "";
-                    var boostsString = BoostsListBox.Items.Cast<string>().Aggregate("", (current, s) => current + s);
-                    boostsString += Player.Items[ItemsListBox.SelectedIndex].StatsName.ToLower();
-
-                    if (boostsString != "")
-                        foreach (var s in DataTable.GenerationBoostsFilterNames)
-                        {
-                            if (!boostsString.Contains(s)) continue;
-                            switch (s)
-                            {
-                                case "arm":
-                                    predictedKeyword += "armor ";
-                                    break;
-                                case "wpn":
-                                    predictedKeyword += "weapon ";
-                                    break;
-                                default:
-                                    predictedKeyword += s + " ";
-                                    break;
-                            }
-                        }
-
-                    var dlg = new AddBoostDialog(predictedKeyword);
-                    dlg.ShowDialog();
-                    if (dlg.DialogResult == true)
-                        BoostsListBox.Items.Add(dlg.BoostText);
-                    break;
-                case "Copy text":
-                    Clipboard.SetText((string)BoostsListBox.SelectedValue);
-                    break;
-                case "Delete":
-                    BoostsListBox.Items.RemoveAt(BoostsListBox.SelectedIndex);
-                    break;
-            }
-        }
-
-        private void Test(object sender, RoutedEventArgs e) {
-
-            Console.WriteLine("TEST HERE");
-            Item addItem = new Item();
-
-            Player.ItemChanges.Add("-1",
-                        new ItemChange(addItem, ChangeType.Add));
-
-            return;
-
-        }
-
         private void SearchTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
         {
             foreach (ListBoxItem i in ItemsListBox.Items)
             {
                 var listBoxText = ((string)i.Content).ToLower();
                 var searchTerms = SearchTextBox.Text.ToLower().Split(' ');
-                var visiblily = Visibility.Visible;
+                var visibility = Visibility.Visible;
                 foreach (var s in searchTerms)
                 {
                     if (listBoxText.Contains(s)) continue;
 
-                    visiblily = Visibility.Collapsed;
+                    visibility = Visibility.Collapsed;
                     break;
                 }
-                i.Visibility = visiblily;
+                i.Visibility = visibility;
             }
+        }
+
+        public static string getEmptySlot(Player player)
+        {
+
+            int emptySlot = 20;
+            while (emptySlot < 16300)
+            {
+                if (!player.SlotsOccupation[emptySlot])
+                {
+                    player.SlotsOccupation[emptySlot] = true;
+                    return emptySlot.ToString();
+                }
+                else emptySlot++;
+            }
+            throw new Exception("Can't find empty slot");
         }
     }
 }
