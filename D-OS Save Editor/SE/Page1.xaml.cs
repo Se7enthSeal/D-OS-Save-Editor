@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using System.Xml.Serialization;
 
 namespace D_OS_Save_Editor
@@ -18,10 +21,8 @@ namespace D_OS_Save_Editor
     {
         private Player _player;
         private List<ItemTemplate> _NewItems;
-
-        private Brush DefaultTextBoxBorderBrush { get; }
-        private Brush[] _itemRarityColor =
-            {Brushes.Black, Brushes.ForestGreen, Brushes.DodgerBlue, Brushes.BlueViolet, Brushes.DeepPink, Brushes.Gold, Brushes.DimGray};
+        private List<ItemTemplate> _AddedItems;
+        private ICollectionView _itemsView;
 
         public Player Player
         {
@@ -45,169 +46,221 @@ namespace D_OS_Save_Editor
             }
         }
 
+        public List<ItemTemplate> AddedItems
+        {
+            get => _AddedItems;
+
+            set
+            {
+                _AddedItems = value;
+                UpdateForm();
+            }
+        }
+
         public Page1()
         {
             InitializeComponent();
-            DefaultTextBoxBorderBrush = AmountTextBox.BorderBrush;
+            
+            _AddedItems = new List<ItemTemplate>();
 
-            RarityComboBox.ItemsSource = Enum.GetValues(typeof(Item.ItemRarityType)).Cast<Item.ItemRarityType>();
         }
 
         public void UpdateForm()
         {
-            ItemsListBox.Items.Clear();
-            foreach (var i in _NewItems)
-                ItemsListBox.Items.Add(new ListBoxItem
-                {
-                    Content = i.Name,
-                    Tag = i.ItemSort,
-                    Foreground = _itemRarityColor[0]
-                });
+            ItemsListBox.ItemsSource = _NewItems;
+
+            SelectedItemsListbox.Items.Clear();
+
+            if (_AddedItems != null)
+            {
+                foreach (var i in _AddedItems)
+                    SelectedItemsListbox.Items.Add(i);
+            }
+
+            this._itemsView = CollectionViewSource.GetDefaultView(ItemsListBox.ItemsSource);
+
+            _itemsView.Filter = UnifiedFilter;
+
+            _itemsView.Refresh();
 
             // check filter
-            foreach (var i in ShowWrapPanel.Children)
+            foreach (var i in ItemSortCheck.Children)
             {
-                if (i is CheckBox)
-                    CheckboxEventSetter_OnClick(i, new RoutedEventArgs());
+                if (i is CheckBox) CheckboxEventSetter_OnClick(i, new RoutedEventArgs());
             }
 
-            // clear all text boxes
-            foreach (var i in ValueWrapPanel.Children)
+        }
+
+        private bool UnifiedFilter(object obj)
+        {
+            var item = obj as ItemTemplate;
+            if (item == null)
+                return false;
+
+            if (IsFilteredOutByText(item.Name))
+                return false;
+
+            if (!PassesCheckboxFilter(item))
+                return false;
+
+            return true;
+        }
+
+        private bool PassesCheckboxFilter(ItemTemplate item) 
+        {
+            foreach (CheckBox cb in ItemSortCheck.Children)
             {
-                if (i is TextBox t)
-                    t.Text = "";
+                if ((ItemSortType)cb.Tag == ItemSortType.Other & cb.IsChecked == true)
+                {
+                    if (item.ItemSort == ItemSortType.Item ||
+                        item.ItemSort == ItemSortType.Unique ||
+                        item.ItemSort == ItemSortType.Other) return true;
+                }
+
+                if (cb.IsChecked == true & item.ItemSort == (ItemSortType)cb.Tag)
+                {
+                    return true;
+                }
+
             }
+
+            return false;
+
         }
 
-        private void TextBoxEventSetter_OnLostFocus(object sender, RoutedEventArgs e)
+        private void DecrementButton_Click(object sender, RoutedEventArgs e) {
+
+            var button = sender as FrameworkElement;
+            if (button == null)
+                return;
+
+            var item = button.DataContext as ItemTemplate;
+            if (item == null) return;
+
+            item.Amount--;
+            return;
+        }
+
+        private void IncrementButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!(sender is TextBox s)) return;
-            if (s.Uid == "SearchText") return;
 
-            var text = s.Text;
-            var valid = int.TryParse(text, out int _);
-            s.BorderBrush = !valid ? Brushes.Red : DefaultTextBoxBorderBrush;
+            var button = sender as FrameworkElement;
+            if (button == null)
+                return;
+
+            var item = button.DataContext as ItemTemplate;
+            if (item == null) return;
+
+            item.Amount++;
+            return;
         }
 
-        private void TextBoxEventSetter_OnPreviewTextInput(object sender, TextCompositionEventArgs e)
+        private void MaxButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!(sender is TextBox s)) return;
-            if (s.Uid == "SearchText") return;
 
-            var text = s.Text.Insert(s.SelectionStart, e.Text);
-            e.Handled = !int.TryParse(text, out int _);
+            var button = sender as FrameworkElement;
+            if (button == null)
+                return;
+
+            var item = button.DataContext as ItemTemplate;
+            if (item == null) return; 
+            
+            if(int.TryParse(item.MaxStack, out int i)) item.Amount = i;
+            return;
         }
+
+        private void ZeroButton_Click(object sender, RoutedEventArgs e)
+        {
+
+            var button = sender as FrameworkElement;
+            if (button == null)
+                return;
+
+            var item = button.DataContext as ItemTemplate;
+            if (item == null) return;
+
+            _AddedItems.Remove(item);
+            UpdateForm();
+        }
+
+        //private void TextBoxEventSetter_OnLostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (!(sender is TextBox s)) return;
+        //    if (s.Uid == "SearchText") return;
+
+        //    var text = s.Text;
+        //    var valid = int.TryParse(text, out int _);
+        //    s.BorderBrush = !valid ? Brushes.Red : DefaultTextBoxBorderBrush;
+        //}
+
+        //private void TextBoxEventSetter_OnPreviewTextInput(object sender, TextCompositionEventArgs e)
+        //{
+        //    if (!(sender is TextBox s)) return;
+        //    if (s.Uid == "SearchText") return;
+
+        //    var text = s.Text.Insert(s.SelectionStart, e.Text);
+        //    e.Handled = !int.TryParse(text, out int _);
+        //}
 
         private void ItemsListBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // clear list boxes
-            BoostsListBox.Items.Clear();
-            PermBoostsListBox.Items.Clear();
 
             var lb = sender as ListBox;
-            if (lb.SelectedIndex < 0)
+            if (lb?.SelectedItem == null) return;
+
+            var item = lb.SelectedItem as ItemTemplate;
+            if (item == null) return;
+
+            #if DEBUG
+            Console.WriteLine("Item name: "+item.Name.ToString());
+            Console.WriteLine("Item Mapkey: "+item.TemplateKey.ToString());
+            if (item.Description != null) Console.WriteLine("Item Description: " + item.Description.ToString());
+            else Console.WriteLine("Description Null");
+            if (item.MaxStack != null) Console.WriteLine("Max Stack: " + item.MaxStack.ToString());
+            else Console.WriteLine("MaxStack Null");
+            #endif
+
+            var itemToAdd = item.DeepClone();
+            if (itemToAdd != null) 
+            { 
+                itemToAdd.Amount = 1;
+                _AddedItems.Add(itemToAdd); 
+            }
+            UpdateForm();
+
+        }
+
+        private void ListBoxItem_Click(object sender, MouseButtonEventArgs e)
+        {
+            var button = sender as FrameworkElement;
+            if (button == null)
                 return;
-            var item = Player.Items[lb.SelectedIndex];
 
+            var item = button.DataContext as ItemTemplate;
+            if (item == null) return;
 
-            var allowedChanges = item.GetAllowedChangeType();
-            #region enable disable controls
+            #if DEBUG
+            Console.WriteLine("Item name: " + item.Name.ToString());
+            Console.WriteLine("Item Mapkey: " + item.TemplateKey.ToString());
+            if (item.Description != null) Console.WriteLine("Item Description: " + item.Description.ToString());
+            else Console.WriteLine("Description Null");
+            if (item.MaxStack != null) Console.WriteLine("Max Stack: " + item.MaxStack.ToString());
+            else Console.WriteLine("MaxStack Null");
+            #endif
 
-            if (allowedChanges.Contains(nameof(item.Vitality)))
+            var itemToAdd = item.DeepClone();
+            if (itemToAdd != null)
             {
-                VitalityTextBox.IsEnabled = true;
-                MaxVitalityPatchCheckTextBox.IsEnabled = true;
+                itemToAdd.Amount = 1;
+                _AddedItems.Add(itemToAdd);
             }
-            else
-            {
-                VitalityTextBox.IsEnabled = false;
-                MaxVitalityPatchCheckTextBox.IsEnabled = false;
-            }
+            UpdateForm();
 
-            RarityComboBox.IsEnabled = allowedChanges.Contains(nameof(item.ItemRarity));
-            AmountTextBox.IsEnabled = allowedChanges.Contains(nameof(item.Amount));
-            LockLevelTextBox.IsEnabled = allowedChanges.Contains(nameof(item.LockLevel));
-            BoostsListBox.IsEnabled = allowedChanges.Contains(nameof(item.Generation));
-
-            if (allowedChanges.Contains(nameof(item.Stats)))
-            {
-                DurabilityTextBox.IsEnabled = true;
-                MaxDurabilityPatchCheckTextBox.IsEnabled = false;
-                DurabilityCounterTextBox.IsEnabled = true;
-                RepairDurabilityPenaltyTextBox.IsEnabled = true;
-                LevelTextBox.IsEnabled = true;
-                PermBoostsListBox.IsEnabled = true;
-            }
-            else
-            {
-                DurabilityTextBox.IsEnabled = false;
-                MaxDurabilityPatchCheckTextBox.IsEnabled = false;
-                DurabilityCounterTextBox.IsEnabled = false;
-                RepairDurabilityPenaltyTextBox.IsEnabled = false;
-                LevelTextBox.IsEnabled = false;
-                PermBoostsListBox.IsEnabled = false;
-            }
-            #endregion
-
-#if DEBUG && LOG_ITEMXML
-            Console.WriteLine(item.Xml);
-#endif
-            // textbox contents
-            AmountTextBox.Text = item.Amount;
-            LockLevelTextBox.Text = item.LockLevel;
-            VitalityTextBox.Text = item.Vitality;
-            MaxVitalityPatchCheckTextBox.Text = item.MaxVitalityPatchCheck;
-            DurabilityTextBox.Text = item.Stats?.Durability ?? "";
-            DurabilityCounterTextBox.Text = item.Stats?.DurabilityCounter ?? "";
-            MaxDurabilityPatchCheckTextBox.Text = item.MaxDurabilityPatchCheck;
-            RepairDurabilityPenaltyTextBox.Text = item.Stats?.RepairDurabilityPenalty ?? "";
-            LevelTextBox.Text = item.Stats?.Level ?? "";
-
-            // combobox
-            RarityComboBox.SelectedIndex = (int)item.ItemRarity;
-
-            // generation
-            if (item.Generation != null)
-            {
-                foreach (var m in item.Generation.Boosts)
-                {
-                    BoostsListBox.Items.Add(m);
-                }
-            }
-
-            // stats
-            if (item.Stats != null)
-            {
-                foreach (var m in item.Stats.PermanentBoost)
-                {
-                    PermBoostsListBox.Items.Add($"{m.Key} - {m.Value}");
-                }
-            }
         }
 
         private void CheckboxEventSetter_OnClick(object sender, RoutedEventArgs e)
         {
-            var ckb = sender as CheckBox;
-            if (!(ckb?.Tag is ItemSortType))
-                return;
-
-            if ((ItemSortType)ckb.Tag == ItemSortType.Other)
-            {
-                foreach (ListBoxItem i in ItemsListBox.Items)
-                {
-                    if ((ItemSortType)i.Tag == ItemSortType.Item || (ItemSortType)i.Tag == ItemSortType.Unique ||
-                        (ItemSortType)i.Tag == ItemSortType.Other)
-                        i.Visibility = ckb.IsChecked == true && !IsFilteredOutByText(i.Content as string) ? Visibility.Visible : Visibility.Collapsed;
-                }
-            }
-            else
-            {
-                foreach (ListBoxItem i in ItemsListBox.Items)
-                {
-                    if ((ItemSortType)i.Tag == (ItemSortType)ckb.Tag)
-                        i.Visibility = ckb.IsChecked == true && !IsFilteredOutByText(i.Content as string) ? Visibility.Visible : Visibility.Collapsed;
-                }
-            }
+            _itemsView?.Refresh();
         }
 
         private bool IsFilteredOutByText(string itemName)
@@ -228,102 +281,41 @@ namespace D_OS_Save_Editor
 
         private void CheckAllButton_OnClick(object sender, RoutedEventArgs e)
         {
-            foreach (var i in ShowWrapPanel.Children)
+            foreach (var i in ItemSortCheck.Children)
             {
                 if (!(i is CheckBox box)) continue;
                 box.IsChecked = true;
-                CheckboxEventSetter_OnClick(i, new RoutedEventArgs());
             }
+
+            _itemsView?.Refresh();
         }
 
         private void UncheckAllButtonBase_OnClick(object sender, RoutedEventArgs e)
         {
-            foreach (var i in ShowWrapPanel.Children)
+            foreach (var i in ItemSortCheck.Children)
             {
                 if (!(i is CheckBox box)) continue;
                 box.IsChecked = false;
-                CheckboxEventSetter_OnClick(i, new RoutedEventArgs());
             }
+            _itemsView?.Refresh();
         }
 
         private void ApplyChangesButton_OnClick(object sender, RoutedEventArgs e)
         {
-            if (ItemsListBox.SelectedIndex < 0)
-                return;
-
             try
             {
-                // apply changes to a copy of the item
-                var item = Player.Items[ItemsListBox.SelectedIndex].DeepClone();
-                var allowedChanges = item.GetAllowedChangeType();
-                if (allowedChanges.Contains(nameof(item.Amount)))
-                    item.Amount = AmountTextBox.Text;
-
-                if (allowedChanges.Contains(nameof(item.LockLevel)))
-                    item.LockLevel = LockLevelTextBox.Text;
-
-                if (allowedChanges.Contains(nameof(item.Vitality)))
+                if (_AddedItems.Count < 1) return;
+                foreach (var i in _AddedItems) 
                 {
-                    item.Vitality = VitalityTextBox.Text;
-                    item.MaxVitalityPatchCheck = MaxVitalityPatchCheckTextBox.Text;
+                    string slot = getEmptySlot(_player);
+                    ItemTemplate temp = new ItemTemplate(i.Name,i.Description,i.TemplateKey,i.MaxStack,i.Stats,i.Amount);
+                    ItemChange change = new ItemChange(temp,ChangeType.Add);
+                    _player.ItemChanges.Add(slot,change);
+                
                 }
 
-                if (allowedChanges.Contains(nameof(item.ItemRarity)))
-                    item.ItemRarity = (Item.ItemRarityType)RarityComboBox.SelectedIndex;
-
-                if (allowedChanges.Contains(nameof(item.Stats)))
-                {
-                    item.Stats.Durability = DurabilityTextBox.Text;
-                    item.Stats.DurabilityCounter = DurabilityCounterTextBox.Text;
-                    item.Stats.RepairDurabilityPenalty = RepairDurabilityPenaltyTextBox.Text;
-                    item.Stats.Level = LevelTextBox.Text;
-                }
-
-                if (allowedChanges.Contains(nameof(item.Generation)))
-                {
-                    if (item.Generation == null)
-                    {
-                        //TODO if Item.Stats is null, an error will occur later on when writing xml because Geneartion.Level is taken from Stats.Level.
-                        //Since Item.Stats == null is not likely to be possible, let's handle it later on if we have an report of this case.
-                        if (item.Stats == null)
-                        {
-                            var xmlSerializer = new XmlSerializer(item.GetType());
-
-                            using (var sw = new StringWriter())
-                            {
-                                xmlSerializer.Serialize(sw, item);
-                                var er = new ErrorReporting("It is not possible to add modifier to this item yet. No changes have been applied.", $"Item.Stats Null. Cannot add item modifiers.\n\nItem XML:\n{sw}", null);
-                                er.ShowDialog();
-                            }
-                            return;
-                        }
-                        item.Generation = new Item.GenerationNode(item.StatsName, "0");
-                    }
-
-                    item.Generation.Boosts = new List<string>();
-                    foreach (string s in BoostsListBox.Items)
-                    {
-                        item.Generation.Boosts.Add(s);
-                    }
-                }
-
-                // add changes
-                if (Player.ItemChanges.ContainsKey(item.Slot))
-                {
-                    Player.ItemChanges[item.Slot] = new ItemChange(item, Player.ItemChanges[item.Slot].ChangeType);
-                }
-                else
-                {
-                    Player.ItemChanges.Add(item.Slot,
-                        new ItemChange(item, ChangeType.Modify));
-                }
-
-                // apply changes to the original item
-                Player.Items[ItemsListBox.SelectedIndex] = item;
-
-                // change colour
-                ((ListBoxItem)ItemsListBox.Items[ItemsListBox.SelectedIndex]).Foreground =
-                    _itemRarityColor[(int)item.ItemRarity];
+                _AddedItems.Clear();
+                UpdateForm();
 
                 var tooltip = new ToolTip { Content = "Changes have been applied!" };
                 ((Button)sender).ToolTip = tooltip;
@@ -349,76 +341,25 @@ namespace D_OS_Save_Editor
             }
         }
 
-        private void BoostsContextMenu_Click(object sender, RoutedEventArgs e)
-        {
-            switch (((MenuItem)sender).Header)
-            {
-                case "Add":
-                    // try pre-determine equipment type
-                    var predictedKeyword = "";
-                    var boostsString = BoostsListBox.Items.Cast<string>().Aggregate("", (current, s) => current + s);
-                    boostsString += Player.Items[ItemsListBox.SelectedIndex].StatsName.ToLower();
-
-                    if (boostsString != "")
-                        foreach (var s in DataTable.GenerationBoostsFilterNames)
-                        {
-                            if (!boostsString.Contains(s)) continue;
-                            switch (s)
-                            {
-                                case "arm":
-                                    predictedKeyword += "armor ";
-                                    break;
-                                case "wpn":
-                                    predictedKeyword += "weapon ";
-                                    break;
-                                default:
-                                    predictedKeyword += s + " ";
-                                    break;
-                            }
-                        }
-
-                    var dlg = new AddBoostDialog(predictedKeyword);
-                    dlg.ShowDialog();
-                    if (dlg.DialogResult == true)
-                        BoostsListBox.Items.Add(dlg.BoostText);
-                    break;
-                case "Copy text":
-                    Clipboard.SetText((string)BoostsListBox.SelectedValue);
-                    break;
-                case "Delete":
-                    BoostsListBox.Items.RemoveAt(BoostsListBox.SelectedIndex);
-                    break;
-            }
-        }
-
-        private void Test(object sender, RoutedEventArgs e) {
-
-            Console.WriteLine("TEST HERE");
-            Item addItem = new Item();
-
-            Player.ItemChanges.Add("-1",
-                        new ItemChange(addItem, ChangeType.Add));
-
-            return;
-
-        }
-
         private void SearchTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
         {
-            foreach (ListBoxItem i in ItemsListBox.Items)
-            {
-                var listBoxText = ((string)i.Content).ToLower();
-                var searchTerms = SearchTextBox.Text.ToLower().Split(' ');
-                var visiblily = Visibility.Visible;
-                foreach (var s in searchTerms)
-                {
-                    if (listBoxText.Contains(s)) continue;
+            _itemsView?.Refresh();
+        }
 
-                    visiblily = Visibility.Collapsed;
-                    break;
+        public static string getEmptySlot(Player player)
+        {
+
+            int emptySlot = 20;
+            while (emptySlot < 16300)
+            {
+                if (!player.SlotsOccupation[emptySlot])
+                {
+                    player.SlotsOccupation[emptySlot] = true;
+                    return emptySlot.ToString();
                 }
-                i.Visibility = visiblily;
+                else emptySlot++;
             }
+            throw new Exception("Can't find empty slot");
         }
     }
 }
