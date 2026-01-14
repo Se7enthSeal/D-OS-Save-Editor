@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using System.Xml.Serialization;
 
 namespace D_OS_Save_Editor
@@ -19,10 +22,7 @@ namespace D_OS_Save_Editor
         private Player _player;
         private List<ItemTemplate> _NewItems;
         private List<ItemTemplate> _AddedItems;
-
-        private Brush DefaultTextBoxBorderBrush { get; }
-        private Brush[] _itemRarityColor =
-            {Brushes.Black, Brushes.ForestGreen, Brushes.DodgerBlue, Brushes.BlueViolet, Brushes.DeepPink, Brushes.Gold, Brushes.DimGray};
+        private ICollectionView _itemsView;
 
         public Player Player
         {
@@ -60,26 +60,16 @@ namespace D_OS_Save_Editor
         public Page1()
         {
             InitializeComponent();
-            DefaultTextBoxBorderBrush = AmountTextBox.BorderBrush;
-
-            RarityComboBox.ItemsSource = Enum.GetValues(typeof(Item.ItemRarityType)).Cast<Item.ItemRarityType>();
+            
             _AddedItems = new List<ItemTemplate>();
+
         }
 
         public void UpdateForm()
         {
-            ItemsListBox.Items.Clear();
-            foreach (var i in _NewItems)
-                ItemsListBox.Items.Add(new ListBoxItem
-                {
-                    Content = i.Name,
-                    Tag = i.ItemSort,
-                    Foreground = _itemRarityColor[0]
-                });
+            ItemsListBox.ItemsSource = _NewItems;
 
             SelectedItemsListbox.Items.Clear();
-
-            //_AddedItems.Add(new ItemTemplate("name", "Considered a beverage by the hale and suicidal Dwarves of the frozen north.", "23276KEY", "999"));
 
             if (_AddedItems != null)
             {
@@ -87,19 +77,55 @@ namespace D_OS_Save_Editor
                     SelectedItemsListbox.Items.Add(i);
             }
 
+            this._itemsView = CollectionViewSource.GetDefaultView(ItemsListBox.ItemsSource);
+
+            _itemsView.Filter = UnifiedFilter;
+
+            _itemsView.Refresh();
+
             // check filter
-            foreach (var i in ShowWrapPanel.Children)
+            foreach (var i in ItemSortCheck.Children)
             {
-                if (i is CheckBox)
-                    CheckboxEventSetter_OnClick(i, new RoutedEventArgs());
+                if (i is CheckBox) CheckboxEventSetter_OnClick(i, new RoutedEventArgs());
             }
 
-            // clear all text boxes
-            foreach (var i in ValueWrapPanel.Children)
+        }
+
+        private bool UnifiedFilter(object obj)
+        {
+            var item = obj as ItemTemplate;
+            if (item == null)
+                return false;
+
+            if (IsFilteredOutByText(item.Name))
+                return false;
+
+            if (!PassesCheckboxFilter(item))
+                return false;
+
+            return true;
+        }
+
+        private bool PassesCheckboxFilter(ItemTemplate item) 
+        {
+            foreach (CheckBox cb in ItemSortCheck.Children)
             {
-                if (i is TextBox t)
-                    t.Text = "";
+                if ((ItemSortType)cb.Tag == ItemSortType.Other & cb.IsChecked == true)
+                {
+                    if (item.ItemSort == ItemSortType.Item ||
+                        item.ItemSort == ItemSortType.Unique ||
+                        item.ItemSort == ItemSortType.Other) return true;
+                }
+
+                if (cb.IsChecked == true & item.ItemSort == (ItemSortType)cb.Tag)
+                {
+                    return true;
+                }
+
             }
+
+            return false;
+
         }
 
         private void DecrementButton_Click(object sender, RoutedEventArgs e) {
@@ -110,91 +136,131 @@ namespace D_OS_Save_Editor
 
             var item = button.DataContext as ItemTemplate;
             if (item == null) return;
-            Console.WriteLine("");
-            Console.WriteLine("");
 
+            item.Amount--;
+            return;
         }
 
-        private void TextBoxEventSetter_OnLostFocus(object sender, RoutedEventArgs e)
+        private void IncrementButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!(sender is TextBox s)) return;
-            if (s.Uid == "SearchText") return;
 
-            var text = s.Text;
-            var valid = int.TryParse(text, out int _);
-            s.BorderBrush = !valid ? Brushes.Red : DefaultTextBoxBorderBrush;
+            var button = sender as FrameworkElement;
+            if (button == null)
+                return;
+
+            var item = button.DataContext as ItemTemplate;
+            if (item == null) return;
+
+            item.Amount++;
+            return;
         }
 
-        private void TextBoxEventSetter_OnPreviewTextInput(object sender, TextCompositionEventArgs e)
+        private void MaxButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!(sender is TextBox s)) return;
-            if (s.Uid == "SearchText") return;
 
-            var text = s.Text.Insert(s.SelectionStart, e.Text);
-            e.Handled = !int.TryParse(text, out int _);
+            var button = sender as FrameworkElement;
+            if (button == null)
+                return;
+
+            var item = button.DataContext as ItemTemplate;
+            if (item == null) return; 
+            
+            if(int.TryParse(item.MaxStack, out int i)) item.Amount = i;
+            return;
         }
+
+        private void ZeroButton_Click(object sender, RoutedEventArgs e)
+        {
+
+            var button = sender as FrameworkElement;
+            if (button == null)
+                return;
+
+            var item = button.DataContext as ItemTemplate;
+            if (item == null) return;
+
+            _AddedItems.Remove(item);
+            UpdateForm();
+        }
+
+        //private void TextBoxEventSetter_OnLostFocus(object sender, RoutedEventArgs e)
+        //{
+        //    if (!(sender is TextBox s)) return;
+        //    if (s.Uid == "SearchText") return;
+
+        //    var text = s.Text;
+        //    var valid = int.TryParse(text, out int _);
+        //    s.BorderBrush = !valid ? Brushes.Red : DefaultTextBoxBorderBrush;
+        //}
+
+        //private void TextBoxEventSetter_OnPreviewTextInput(object sender, TextCompositionEventArgs e)
+        //{
+        //    if (!(sender is TextBox s)) return;
+        //    if (s.Uid == "SearchText") return;
+
+        //    var text = s.Text.Insert(s.SelectionStart, e.Text);
+        //    e.Handled = !int.TryParse(text, out int _);
+        //}
 
         private void ItemsListBox_OnSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // clear list boxes
-            var lb = sender as ListBox;
-            if (lb.SelectedIndex < 0)
-                return;
-            var item = _NewItems[lb.SelectedIndex];
 
-#if DEBUG
+            var lb = sender as ListBox;
+            if (lb?.SelectedItem == null) return;
+
+            var item = lb.SelectedItem as ItemTemplate;
+            if (item == null) return;
+
+            #if DEBUG
             Console.WriteLine("Item name: "+item.Name.ToString());
             Console.WriteLine("Item Mapkey: "+item.TemplateKey.ToString());
             if (item.Description != null) Console.WriteLine("Item Description: " + item.Description.ToString());
             else Console.WriteLine("Description Null");
             if (item.MaxStack != null) Console.WriteLine("Max Stack: " + item.MaxStack.ToString());
             else Console.WriteLine("MaxStack Null");
-#endif
-            _AddedItems.Add(item.DeepClone());
+            #endif
+
+            var itemToAdd = item.DeepClone();
+            if (itemToAdd != null) 
+            { 
+                itemToAdd.Amount = 1;
+                _AddedItems.Add(itemToAdd); 
+            }
             UpdateForm();
 
-            //var allowedChanges = item.GetAllowedChangeType();
-            #region enable disable controls
+        }
 
-            //RarityComboBox.IsEnabled = allowedChanges.Contains(nameof(item.ItemRarity));
-            AmountTextBox.IsEnabled = true;
+        private void ListBoxItem_Click(object sender, MouseButtonEventArgs e)
+        {
+            var button = sender as FrameworkElement;
+            if (button == null)
+                return;
 
-            #endregion
+            var item = button.DataContext as ItemTemplate;
+            if (item == null) return;
 
-#if DEBUG && LOG_ITEMXML
-            Console.WriteLine(item.Xml);
-#endif
-            // textbox contents
-            //AmountTextBox.Text = item.Amount;
+            #if DEBUG
+            Console.WriteLine("Item name: " + item.Name.ToString());
+            Console.WriteLine("Item Mapkey: " + item.TemplateKey.ToString());
+            if (item.Description != null) Console.WriteLine("Item Description: " + item.Description.ToString());
+            else Console.WriteLine("Description Null");
+            if (item.MaxStack != null) Console.WriteLine("Max Stack: " + item.MaxStack.ToString());
+            else Console.WriteLine("MaxStack Null");
+            #endif
 
-            // combobox
-            //RarityComboBox.SelectedIndex = (int)item.ItemRarity;
+            var itemToAdd = item.DeepClone();
+            if (itemToAdd != null)
+            {
+                itemToAdd.Amount = 1;
+                _AddedItems.Add(itemToAdd);
+            }
+            UpdateForm();
 
         }
 
         private void CheckboxEventSetter_OnClick(object sender, RoutedEventArgs e)
         {
-            var ckb = sender as CheckBox;
-            if (!(ckb?.Tag is ItemSortType))
-                return;
-
-            if ((ItemSortType)ckb.Tag == ItemSortType.Other)
-            {
-                foreach (ListBoxItem i in ItemsListBox.Items)
-                {
-                    if ((ItemSortType)i.Tag == ItemSortType.Item || (ItemSortType)i.Tag == ItemSortType.Unique ||
-                        (ItemSortType)i.Tag == ItemSortType.Other)
-                        i.Visibility = ckb.IsChecked == true && !IsFilteredOutByText(i.Content as string) ? Visibility.Visible : Visibility.Collapsed;
-                }
-            }
-            else
-            {
-                foreach (ListBoxItem i in ItemsListBox.Items)
-                {
-                    if ((ItemSortType)i.Tag == (ItemSortType)ckb.Tag)
-                        i.Visibility = ckb.IsChecked == true && !IsFilteredOutByText(i.Content as string) ? Visibility.Visible : Visibility.Collapsed;
-                }
-            }
+            _itemsView?.Refresh();
         }
 
         private bool IsFilteredOutByText(string itemName)
@@ -215,38 +281,41 @@ namespace D_OS_Save_Editor
 
         private void CheckAllButton_OnClick(object sender, RoutedEventArgs e)
         {
-            foreach (var i in ShowWrapPanel.Children)
+            foreach (var i in ItemSortCheck.Children)
             {
                 if (!(i is CheckBox box)) continue;
                 box.IsChecked = true;
-                CheckboxEventSetter_OnClick(i, new RoutedEventArgs());
             }
+
+            _itemsView?.Refresh();
         }
 
         private void UncheckAllButtonBase_OnClick(object sender, RoutedEventArgs e)
         {
-            foreach (var i in ShowWrapPanel.Children)
+            foreach (var i in ItemSortCheck.Children)
             {
                 if (!(i is CheckBox box)) continue;
                 box.IsChecked = false;
-                CheckboxEventSetter_OnClick(i, new RoutedEventArgs());
             }
+            _itemsView?.Refresh();
         }
 
         private void ApplyChangesButton_OnClick(object sender, RoutedEventArgs e)
         {
-            
             try
             {
                 if (_AddedItems.Count < 1) return;
                 foreach (var i in _AddedItems) 
                 {
                     string slot = getEmptySlot(_player);
-                    ItemTemplate temp = new ItemTemplate(i.Name,i.Description,i.TemplateKey,i.MaxStack,i.Stats,4);
+                    ItemTemplate temp = new ItemTemplate(i.Name,i.Description,i.TemplateKey,i.MaxStack,i.Stats,i.Amount);
                     ItemChange change = new ItemChange(temp,ChangeType.Add);
                     _player.ItemChanges.Add(slot,change);
                 
                 }
+
+                _AddedItems.Clear();
+                UpdateForm();
 
                 var tooltip = new ToolTip { Content = "Changes have been applied!" };
                 ((Button)sender).ToolTip = tooltip;
@@ -274,20 +343,7 @@ namespace D_OS_Save_Editor
 
         private void SearchTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
         {
-            foreach (ListBoxItem i in ItemsListBox.Items)
-            {
-                var listBoxText = ((string)i.Content).ToLower();
-                var searchTerms = SearchTextBox.Text.ToLower().Split(' ');
-                var visibility = Visibility.Visible;
-                foreach (var s in searchTerms)
-                {
-                    if (listBoxText.Contains(s)) continue;
-
-                    visibility = Visibility.Collapsed;
-                    break;
-                }
-                i.Visibility = visibility;
-            }
+            _itemsView?.Refresh();
         }
 
         public static string getEmptySlot(Player player)

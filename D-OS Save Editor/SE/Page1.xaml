@@ -13,8 +13,8 @@
             <Setter Property="Margin" Value="20,5,0,5"/>
             <Setter Property="Width" Value="45"/>
             <Setter Property="HorizontalAlignment" Value="Left"></Setter>
-            <EventSetter Event="LostFocus" Handler="TextBoxEventSetter_OnLostFocus"/>
-            <EventSetter Event="PreviewTextInput" Handler="TextBoxEventSetter_OnPreviewTextInput"/>
+            <!--<EventSetter Event="LostFocus" Handler="TextBoxEventSetter_OnLostFocus"/>
+            <EventSetter Event="PreviewTextInput" Handler="TextBoxEventSetter_OnPreviewTextInput"/>-->
         </Style>
         <Style TargetType="RowDefinition">
             <Setter Property="Height" Value="Auto"/>
@@ -48,16 +48,22 @@
             <TextBox Grid.Column="1" x:Name="SearchTextBox" Uid="SearchText" Margin="10,0,20,0" VerticalAlignment="Top" HorizontalAlignment="Stretch" Width="Auto" TextChanged="SearchTextBox_OnTextChanged"/>
             <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="Use space to separate" FontSize="10" FontStyle="Italic"/>
         </Grid>
-        <ListBox x:Name="ItemsListBox" Grid.Row="1" Grid.RowSpan="3" HorizontalAlignment="Left" MinHeight="430" Height="Auto" Margin="10,0,20,10" VerticalAlignment="Top" Width="239" SelectionChanged="ItemsListBox_OnSelectionChanged">
+        <ListBox x:Name="ItemsListBox" Grid.Row="1" Grid.RowSpan="3" HorizontalAlignment="Left" MinHeight="430" Height="Auto" Margin="10,0,20,10" VerticalAlignment="Top" Width="239">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <EventSetter Event="PreviewMouseLeftButtonUp" Handler="ListBoxItem_Click"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
 
             <ListBox.ItemTemplate>
                 <DataTemplate>
 
-                    <TextBlock Grid.Column="0"
+                    <TextBlock Grid.Column="0" ToolTipService.InitialShowDelay = '50'
                         Text="{Binding Name}"
                         TextWrapping="NoWrap"
                         TextTrimming="CharacterEllipsis"
-                        VerticalAlignment="Center"/>
+                        VerticalAlignment="Center"
+                        ToolTip="{Binding Description}"/>
 
                 </DataTemplate>
             </ListBox.ItemTemplate>
@@ -67,7 +73,7 @@
             <Button Content="Check all" Margin="0,0,20,0" Padding="5,2" Width="80" Click="CheckAllButton_OnClick" VerticalAlignment="Top"/>
             <Button Content="Uncheck all" Padding="5,2" Width="80" Click="UncheckAllButtonBase_OnClick" VerticalAlignment="Top"/>
         </StackPanel>
-        <WrapPanel x:Name="ShowWrapPanel" Grid.Row="1" Grid.Column="1" Margin="0,0,0,20">
+        <WrapPanel x:Name="ItemSortCheck" Grid.Row="1" Grid.Column="1" Margin="0,0,0,20">
             <WrapPanel.Resources>
                 <Style TargetType="CheckBox">
                     <Setter Property="Margin" Value="0,0,10,10"/>
@@ -92,33 +98,10 @@
             <CheckBox x:Name="ShowKeyCheckBox" Content="Key" Tag="{x:Static local:ItemSortType.Key}"/>
             <CheckBox x:Name="ShowOtherCheckBox" Content="Other" Tag="{x:Static local:ItemSortType.Other}"/>
         </WrapPanel>
-        <WrapPanel x:Name="ValueWrapPanel" Grid.Column="1" Grid.Row="2">
-            <GroupBox Header="Stats" x:Name="StatsGroupBox">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                        <RowDefinition/>
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="Amount:"/>
-                    <TextBox x:Name="AmountTextBox" Grid.Column="1" Margin="20,5,0,5" Width="90"/>
-                    <ComboBox x:Name="RarityComboBox" Grid.Column="1" Grid.Row="1" Width="90" Height="22" Margin="20,0,0,0"/>
 
-                </Grid>
-            </GroupBox>
-
-        </WrapPanel>
-
-        <Grid Grid.Row="2"
+        <Grid Grid.Row="1"
           Grid.Column="1"
-          Margin="0,100,0,0"
+          Margin="0,80,0,0"
           IsSharedSizeScope="True"
           HorizontalAlignment="Stretch"
               Width="500">
@@ -128,76 +111,58 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Header -->
-                <!--<Grid Margin="4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="130" SharedSizeGroup="ItemCol"/>
-                        <ColumnDefinition Width="*" SharedSizeGroup="DescCol"/>
-                        <ColumnDefinition Width="60" SharedSizeGroup="BtnCol"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" Text="Item"/>
-                    <TextBlock Grid.Column="1" Text="Description"/>
-                    <TextBlock Grid.Column="2" Text="Add"
-                       HorizontalAlignment="Center"/>
-                </Grid>-->
 
                 <!-- List -->
                 <ListBox Grid.Row="1"
                          x:Name="SelectedItemsListbox"
-                         MinHeight="230"
+                         MinHeight="350"
                          BorderThickness="1"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          Width="490">
 
                     <ListBox.ItemTemplate>
-                        <DataTemplate>
-                        <Grid Margin="4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="290" SharedSizeGroup="ItemCol"/>
-                                    <ColumnDefinition Width="*" SharedSizeGroup="BtnCol"/>
-                                </Grid.ColumnDefinitions>
+                            <DataTemplate>
+                            <Grid Margin="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="290" SharedSizeGroup="ItemCol"/>
+                                        <ColumnDefinition Width="*" SharedSizeGroup="BtnCol"/>
+                                    </Grid.ColumnDefinitions>
 
-                                <TextBlock Grid.Column="0"
-                                   Text="{Binding Name}"
-                                   TextWrapping="NoWrap"
-                                   TextTrimming="CharacterEllipsis"
-                                   VerticalAlignment="Center"/>
-
-                                <!--<TextBlock Grid.Column="1"
-                                   Text="{Binding Description}"
-                                   TextWrapping="NoWrap"
-                                   TextTrimming="CharacterEllipsis"
-                                   VerticalAlignment="Center"/>-->
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding Name}"
+                                       TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       VerticalAlignment="Center"/>
 
                             <StackPanel Grid.Column="2"
-                            Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            >
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Center"
+                                >
 
-                                <!-- Decrement -->
-                                <Button Content="0" Width="25" Height="25"/>
-                                <Button Content="-" Width="25" Height="25" Click="DecrementButton_Click"
-                            />
+                                    <Button Content="X" Width="25" Height="25" Click="ZeroButton_Click"/>
+                                    <RepeatButton  Content="-" Width="25" Height="25" Click="DecrementButton_Click" 
+                                                   Interval="20"           
+                                                   Delay="250" />
 
-                                <!-- Number display -->
-                                <TextBox Text="66"
-                             Margin="0,0,0,0"
-                             HorizontalContentAlignment="Center"
-                             VerticalContentAlignment="Center"/>
+                                    <TextBox Text="{Binding Amount ,
+                                                            UpdateSourceTrigger=PropertyChanged,
+                                                            Mode=TwoWay}" 
+                                             Uid ="ItemCounter"
+                                             Margin="0,0,0,0"
+                                             HorizontalContentAlignment="Center"
+                                             VerticalContentAlignment="Center"
+                                             />
 
-                                <!-- Increment -->
-                                <Button Content="+" Width="25" Height="25"
-                            />
+                                    <RepeatButton Content="+" Width="25" Height="25" Interval="20"           
+                                                        Delay="250" Click="IncrementButton_Click"/>
 
-                                <!-- Optional Max/Zero buttons -->
-                                <Button Content="Max" Width="30" Height="25"/>
+                                    <Button Content="Max" Width="30" Height="25" Click="MaxButton_Click"/>
                                 
-                            </StackPanel>
-                        </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
+                                </StackPanel>
+                            </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
 
                 </ListBox>
 

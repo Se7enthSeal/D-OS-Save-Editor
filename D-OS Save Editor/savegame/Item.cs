@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Xml;
 
@@ -529,15 +530,38 @@ namespace D_OS_Save_Editor
 
     }
 
-    public class ItemTemplate 
+    public class ItemTemplate : INotifyPropertyChanged
     {
+        protected void OnPropertyChanged(string name)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         public string Name { get; set; }
         public string Stats { get; set; }
         public string Description { get; set; }
         public string TemplateKey { get; set; }
         public string MaxStack { get; set; }
         public ItemSortType ItemSort { get; set; }
-        public int Amount { get; set; }
+        //public int Amount { get; set; }
+
+        private int _amount;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public int Amount
+        {
+            get => _amount;
+            set
+            {
+                if (!int.TryParse(MaxStack, out int max))
+                    _amount = 1;
+                else if (value == _amount)
+                    return;
+                else
+                    _amount = Math.Min(Math.Max(value, 1), max);
+                
+                // optionally notify UI
+                OnPropertyChanged(nameof(Amount));
+            }
+        }
 
         public ItemTemplate(string name, string description, string TemplateKey, string maxStack, string stats) {
             this.Name = name;

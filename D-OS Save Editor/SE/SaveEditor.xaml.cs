@@ -51,129 +51,101 @@ namespace D_OS_Save_Editor
 
         private List<ItemTemplate> LoadNewItems()
         {
-            string path = Path.Combine(AppContext.BaseDirectory, "ItemTemplates", "Consumables.lsx");
-
-            //XElement items = XElement.Load($"C:\\Users\\india\\Downloads\\D-OS-Save-Editor\\D-OS Save Editor\\ItemTemplates\\Consumables.lsx");
-            XElement items = XElement.Load(path);
-
-            IEnumerable<XElement> node = items.XPathSelectElement("//node[@id='root']//children").Elements();
-
             List<ItemTemplate> result = new List<ItemTemplate>();
-
-            string innerXMLTemplate = $"<node id=\"Item\">  " +
-                                            "<attribute id=\"Translate\" value=\"688.623 -19.9 395.7792\" type=\"12\" />  " +
-                                            "<attribute id=\"Flags\" value=\"558040\" type=\"5\" />  " +
-                                            "<attribute id=\"Level\" value=\"\" type=\"22\" />  " +
-                                            "<attribute id=\"Rotate\" value=\" 0.75  0.00  0.66 &#xD;&#xA; 0.00  1.00  0.00 &#xD;&#xA;-0.66  0.00  0.75 &#xD;&#xA;\" type=\"15\" />  " +
-                                            "<attribute id=\"Scale\" value=\"1\" type=\"6\" />  " +
-                                            "<attribute id=\"Global\" value=\"True\" type=\"19\" />  " +
-                                            "<attribute id=\"Velocity\" value=\"0 0 0\" type=\"12\" />  " +
-                                            "<attribute id=\"GoldValueOverwrite\" value=\"-1\" type=\"4\" />  " +
-                                            "<attribute id=\"UnsoldGenerated\" value=\"True\" type=\"19\" />  " +
-                                            "<attribute id=\"IsKey\" value=\"False\" type=\"19\" />  " +
-                                            "<attribute id=\"TreasureGenerated\" value=\"False\" type=\"19\" />  " +
-                                            "<attribute id=\"CurrentTemplate\" value=\"\" type=\"22\" />  " +
-                                            "<attribute id=\"CurrentTemplateType\" value=\"0\" type=\"1\" />  " +
-                                            "<attribute id=\"OriginalTemplate\" value=\"\" type=\"22\" />  " +
-                                            "<attribute id=\"OriginalTemplateType\" value=\"0\" type=\"1\" />  " +
-                                            "<attribute id=\"Stats\" value=\"\" type=\"22\" />  " +
-                                            "<attribute id=\"IsGenerated\" value=\"False\" type=\"19\" />  " +
-                                            "<attribute id=\"Inventory\" value=\"0\" type=\"5\" />  " +
-                                            "<attribute id=\"Parent\" value=\"\" type=\"5\" />  " +
-                                            "<attribute id=\"Slot\" value=\"\" type=\"3\" />  " +
-                                            "<attribute id=\"Amount\" value=\"1\" type=\"4\" />  " +
-                                            "<attribute id=\"Key\" value=\"\" type=\"22\" />  " +
-                                            "<attribute id=\"LockLevel\" value=\"1\" type=\"4\" />  " +
-                                            "<attribute id=\"SurfaceCheckTimer\" value=\"3.433501\" type=\"6\" />  " +
-                                            "<attribute id=\"Vitality\" value=\"-1\" type=\"4\" />  " +
-                                            "<attribute id=\"LifeTime\" value=\"0\" type=\"6\" />  " +
-                                            "<attribute id=\"owner\" value=\"67174548\" type=\"5\" />  " +
-                                            "<attribute id=\"ItemType\" value=\"Common\" type=\"22\" />  " +
-                                            "<attribute id=\"MaxVitalityPatchCheck\" value=\"-1\" type=\"4\" />  " +
-                                            "<children>    " +
-                                                "<node id=\"ItemMachine\" />    " +
-                                                "<node id=\"VariableManager\" />    " +
-                                                "<node id=\"StatusManager\" />  " +
-                                            "</children>" +
-                                       "</node>";
-
-            //Console.WriteLine("NODES: "+ node.Count());
-
-            foreach (var itemToAdd in node) 
+            string path = Path.Combine(AppContext.BaseDirectory, "ItemTemplates");
+            
+            if (Directory.Exists(path))
             {
-                //Console.WriteLine(itemToAdd.ToString(SaveOptions.None));
-                if(GetAttr(itemToAdd, "CanBePickedUp") == "False") continue;
-
-                string name = GetAttr(itemToAdd, "Name");
-                string stats = GetAttr(itemToAdd, "Stats");
-                string description = GetAttr(itemToAdd, "Description");
-                string templateKey = GetAttr(itemToAdd, "MapKey");
-                string maxStack = GetAttr(itemToAdd, "maxStackAmount");
-
-                ItemTemplate item = new ItemTemplate(name, description, templateKey, maxStack, stats);
-
-
-                if (DataTable.GoldNames.Contains(item.Name.ToLower()))
-                    item.ItemSort = ItemSortType.Gold;
-                else 
+                foreach (var file in Directory.EnumerateFiles(path, "*.lsx"))
                 {
-                    var nameParts = item.Name.ToLower().Split('_');
+                    XElement items = XElement.Load(file);
+                    IEnumerable<XElement> node = items.XPathSelectElement("//node[@id='root']//children").Elements();
 
-                    if (nameParts[0] == "wpn" &&
-                        DataTable.ArrowTypeNames.Contains(nameParts[1]))
-                        item.ItemSort = ItemSortType.Arrow;
-                    else
-                        switch (nameParts[0])
+                    foreach (var itemToAdd in node)
+                    {
+
+                        if (
+                            (GetAttr(itemToAdd, "CanBePickedUp") == "True")  
+                            & !(GetAttr(itemToAdd, "Stats") == null)
+                            & !(GetAttr(itemToAdd, "MapKey") == null)
+                            ) 
                         {
-                            case "item":
-                                item.ItemSort = ItemSortType.Item;
-                                break;
-                            case "potion":
-                                item.ItemSort = ItemSortType.Potion;
-                                break;
-                            case "arm":
-                                item.ItemSort = ItemSortType.Armor;
-                                break;
-                            case "wpn":
-                                item.ItemSort = ItemSortType.Weapon;
-                                break;
-                            case "skillbook":
-                                item.ItemSort = ItemSortType.Skillbook;
-                                break;
-                            case "scroll":
-                                item.ItemSort = ItemSortType.Scroll;
-                                break;
-                            case "grn":
-                                item.ItemSort = ItemSortType.Granade;
-                                break;
-                            case "food":
-                                item.ItemSort = ItemSortType.Food;
-                                break;
-                            case "fur":
-                                item.ItemSort = ItemSortType.Furniture;
-                                break;
-                            case "loot":
-                                item.ItemSort = ItemSortType.Loot;
-                                break;
-                            case "quest":
-                                item.ItemSort = ItemSortType.Quest;
-                                break;
-                            case "tool":
-                                item.ItemSort = ItemSortType.Tool;
-                                break;
-                            case "unique":
-                                item.ItemSort = ItemSortType.Unique;
-                                break;
-                            case "book":
-                                item.ItemSort = ItemSortType.Book;
-                                break;
-                            default:
-                                item.ItemSort = ItemSortType.Other;
-                                break;
+                            string name = GetAttr(itemToAdd, "Name");
+                            string stats = GetAttr(itemToAdd, "Stats");
+                            string description = GetAttr(itemToAdd, "Description");
+                            string templateKey = GetAttr(itemToAdd, "MapKey");
+                            string maxStack = GetAttr(itemToAdd, "maxStackAmount");
+
+                            ItemTemplate item = new ItemTemplate(name, description, templateKey, maxStack, stats);
+
+                            if (DataTable.GoldNames.Contains(item.Name.ToLower()))
+                                item.ItemSort = ItemSortType.Gold;
+                            else
+                            {
+                                var nameParts = item.Name.ToLower().Split('_');
+
+                                if (nameParts[0] == "wpn" &&
+                                    DataTable.ArrowTypeNames.Contains(nameParts[1]))
+                                    item.ItemSort = ItemSortType.Arrow;
+                                else
+                                    switch (nameParts[0])
+                                    {
+                                        case "item":
+                                            item.ItemSort = ItemSortType.Item;
+                                            break;
+                                        case "potion":
+                                            item.ItemSort = ItemSortType.Potion;
+                                            break;
+                                        case "arm":
+                                            item.ItemSort = ItemSortType.Armor;
+                                            break;
+                                        case "wpn":
+                                            item.ItemSort = ItemSortType.Weapon;
+                                            break;
+                                        case "skillbook":
+                                            item.ItemSort = ItemSortType.Skillbook;
+                                            break;
+                                        case "book_skill":
+                                            item.ItemSort = ItemSortType.Skillbook;
+                                            break;
+                                        case "scroll":
+                                            item.ItemSort = ItemSortType.Scroll;
+                                            break;
+                                        case "grn":
+                                            item.ItemSort = ItemSortType.Granade;
+                                            break;
+                                        case "food":
+                                            item.ItemSort = ItemSortType.Food;
+                                            break;
+                                        case "fur":
+                                            item.ItemSort = ItemSortType.Furniture;
+                                            break;
+                                        case "loot":
+                                            item.ItemSort = ItemSortType.Loot;
+                                            break;
+                                        case "quest":
+                                            item.ItemSort = ItemSortType.Quest;
+                                            break;
+                                        case "tool":
+                                            item.ItemSort = ItemSortType.Tool;
+                                            break;
+                                        case "unique":
+                                            item.ItemSort = ItemSortType.Unique;
+                                            break;
+                                        case "book":
+                                            item.ItemSort = ItemSortType.Book;
+                                            break;
+                                        default:
+                                            item.ItemSort = ItemSortType.Other;
+                                            break;
+                                    }
+                            }
+                            result.Add(item); 
                         }
+
+                    }
+
                 }
-                result.Add(item);
-                //Console.WriteLine("--------------------------------------------------------------------------------------------");
             }
 
             return result;
