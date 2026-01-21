@@ -80,6 +80,9 @@ namespace D_OS_Save_Editor
             this._itemsView = CollectionViewSource.GetDefaultView(ItemsListBox.ItemsSource);
 
             _itemsView.Filter = UnifiedFilter;
+            _itemsView.SortDescriptions.Clear();
+            _itemsView.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
+
 
             _itemsView.Refresh();
 

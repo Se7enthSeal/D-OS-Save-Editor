@@ -192,6 +192,7 @@ namespace D_OS_Save_Editor
             Page1.NewItems = GameItems;
             Page1.Player = EditingPlayers[id];
             
+
             if (EditingPlayers[id].Name == "Henchman")
             {
                 //TraitsTab.IsEnabled = false;

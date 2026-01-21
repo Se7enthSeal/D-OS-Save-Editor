@@ -615,7 +615,8 @@ namespace D_OS_Save_Editor
                 }
 
             }
-            
+            var x = doc.ToString();
+            Console.WriteLine("--------");
 
             return doc;
         }

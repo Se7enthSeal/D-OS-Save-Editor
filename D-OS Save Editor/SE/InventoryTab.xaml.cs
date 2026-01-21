@@ -397,14 +397,5 @@ namespace D_OS_Save_Editor
             }
         }
 
-        private void Test(object sender, RoutedEventArgs e)
-        {
-
-            Console.WriteLine("TEST HERE");
-            Item addItem = new Item();
-
-            return;
-
-        }
     }
 }
