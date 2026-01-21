@@ -125,8 +125,8 @@
     <Compile Include="savegame\LsxParser.cs" />
     <Compile Include="savegame\Player.cs" />
     <Compile Include="Properties\Annotations.cs" />
-    <Compile Include="SE\Page1.xaml.cs">
-      <DependentUpon>Page1.xaml</DependentUpon>
+    <Compile Include="SE\AddItemTab.xaml.cs">
+      <DependentUpon>AddItemTab.xaml</DependentUpon>
     </Compile>
     <Compile Include="SE\SaveEditor.xaml.cs">
       <DependentUpon>SaveEditor.xaml</DependentUpon>
@@ -185,7 +185,7 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="SE\Page1.xaml">
+    <Page Include="SE\AddItemTab.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -121,7 +121,7 @@
                 <local:InventoryTab x:Name="InventoryTab" Margin="10"/>
             </TabItem>
             <TabItem Header="Add Items">
-                <local:Page1 x:Name="Page1" Margin="10"/>
+                <local:AddItemTab x:Name="AddItemTab" Margin="10"/>
             </TabItem>
 
             <TabItem Header="Debug" Visibility="Collapsed">

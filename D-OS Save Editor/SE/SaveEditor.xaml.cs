@@ -189,8 +189,8 @@ namespace D_OS_Save_Editor
             InventoryTab.Player = EditingPlayers[id];
             TraitsTab.Player = EditingPlayers[id];
             TalentTab.Player = EditingPlayers[id];
-            Page1.NewItems = GameItems;
-            Page1.Player = EditingPlayers[id];
+            AddItemTab.NewItems = GameItems;
+            AddItemTab.Player = EditingPlayers[id];
             
 
             if (EditingPlayers[id].Name == "Henchman")
@@ -255,7 +255,7 @@ namespace D_OS_Save_Editor
             StatsTab.UpdateForm();
             AbilitiesTab.UpdateForm();
             InventoryTab.UpdateForm();
-            Page1.UpdateForm();
+            AddItemTab.UpdateForm();
         }
 
         private void SaveEditor_OnClosed(object sender, EventArgs e)

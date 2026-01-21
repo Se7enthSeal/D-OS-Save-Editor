@@ -17,7 +17,7 @@ namespace D_OS_Save_Editor
     /// <summary>
     /// Interaction logic for Inventory.xaml
     /// </summary>
-    public partial class Page1
+    public partial class AddItemTab
     {
         private Player _player;
         private List<ItemTemplate> _NewItems;
@@ -57,7 +57,7 @@ namespace D_OS_Save_Editor
             }
         }
 
-        public Page1()
+        public AddItemTab()
         {
             InitializeComponent();
             
