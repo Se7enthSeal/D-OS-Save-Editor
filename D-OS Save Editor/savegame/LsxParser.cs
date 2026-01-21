@@ -351,9 +351,6 @@ namespace D_OS_Save_Editor
             if (playerData == null)
                 throw new XmlException("Unable to find any player data in the savegame.");
 
-            ParallelOptions parallelOptions = new ParallelOptions();
-            parallelOptions.MaxDegreeOfParallelism = 1;
-
             for (int i = 0; i < players.Length; i++)
             //Parallel.For(0, playerData.Count, parallelOptions, i =>
             {
@@ -530,8 +527,6 @@ namespace D_OS_Save_Editor
                 }
             }
 
-            //inventoryData = doc.DocumentElement.SelectNodes($"//attribute [@id='Parent'] [@value='{player.InventoryId}']");
-
             foreach (var ic in player.ItemChanges)
             {
 
@@ -577,23 +572,7 @@ namespace D_OS_Save_Editor
 		                                        <node id=""StatusManager"" />
 	                                        </children>
                                         </node>";
-                    var settings = new XmlWriterSettings
-                    {
-                        Indent = true,
-                        IndentChars = "  ",
-                        OmitXmlDeclaration = true,
-                        NewLineOnAttributes = false,
-                        ConformanceLevel = ConformanceLevel.Fragment
-                    };
-
-                    var settings1 = new XmlWriterSettings
-                    {
-                        Indent = true,
-                        IndentChars = "  ",
-                        OmitXmlDeclaration = true,
-                        NewLineOnAttributes = false
-                    };
-
+                    
                     XmlNode targetChildren = doc.SelectSingleNode("//region[@id='Items']/node[@id='Items']/children/node[@id='ItemFactory']/children/node[@id='Items']/children");
 
                     XmlNodeList filteredItems = targetChildren.SelectNodes(
@@ -615,8 +594,6 @@ namespace D_OS_Save_Editor
                 }
 
             }
-            var x = doc.ToString();
-            Console.WriteLine("--------");
 
             return doc;
         }
