@@ -47,7 +47,6 @@ namespace D_OS_Save_Editor
             DataContext = MainWindowData;
 
 #if LOAD_FROM_JSON
-            var se = new SaveEditor(@"C:\Users\india\Downloads\D-OS-Save-Editor\D-OS Save Editor\bin\Debug\SaveGame_260112_182331.json");
             //var se = new SaveEditor(@"E:\Documents\Visual Studio 2017\Projects\D-OS SE\D-OS Save Editor\test\SaveGame180403_011306.json");
             se.Show();
             //this.Visibility = Visibility.Hidden;
