@@ -379,6 +379,39 @@ namespace D_OS_Save_Editor
             }
         }
 
+        private void CloneItem_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (ItemsListBox.SelectedIndex < 0)
+                return;
+
+            try
+            {
+                var sourceItem = Player.Items[ItemsListBox.SelectedIndex];
+                var clonedItem = sourceItem.DeepClone();
+
+                string freeSlotStr = AddItemTab.getEmptySlot(Player);
+
+                clonedItem.Slot = freeSlotStr;
+
+                Player.ItemChanges.Add(clonedItem.Slot, new ItemChange(clonedItem, ChangeType.Add));
+
+                var items = Player.Items.ToList();
+                items.Add(clonedItem);
+                Player.Items = items.ToArray();
+
+                ItemsListBox.Items.Add(new ListBoxItem
+                {
+                    Content = clonedItem.StatsName,
+                    Tag = clonedItem.ItemSort,
+                    Foreground = _itemRarityColor[(int)clonedItem.ItemRarity]
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to clone item.\n\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void SearchTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
         {
             foreach (ListBoxItem i in ItemsListBox.Items)
