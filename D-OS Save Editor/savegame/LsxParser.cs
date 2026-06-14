@@ -532,6 +532,34 @@ namespace D_OS_Save_Editor
 
                 if (ic.Value.ChangeType == ChangeType.Add)
                 {
+                    if (ic.Value.ItemTemplate == null && ic.Value.Item != null)
+                    {
+                        // get source item XML and build a new document from it
+                        var sourceNode = inventoryData[ic.Value.Item.ItemXmlNodeIdx].ParentNode;
+                        var tempDoc = new XmlDocument();
+                        tempDoc.LoadXml(sourceNode.OuterXml);
+                        tempDoc.DocumentElement.SelectSingleNode("attribute [@id='Slot']").Attributes[1].Value = ic.Value.Item.Slot;
+
+                        // import into target doc (same pattern as template-based add)
+                        var cloneImported = doc.ImportNode(tempDoc.DocumentElement, true);
+
+                        var cloneTarget = doc.SelectSingleNode("//region[@id='Items']/node[@id='Items']/children/node[@id='ItemFactory']/children/node[@id='Items']/children");
+                        var cloneFiltered = cloneTarget.SelectNodes(
+                            $"node[@id='Item' and attribute[@id='Parent' and @value='{player.InventoryId}']]"
+                        );
+                        var cloneLast = cloneFiltered.Count > 0 ? cloneFiltered[cloneFiltered.Count - 1] : null;
+                        if (cloneLast != null)
+                            cloneTarget.InsertAfter(cloneImported, cloneLast);
+                        else
+                            cloneTarget.AppendChild(cloneImported);
+
+#if DEBUG
+                        System.Diagnostics.Debug.WriteLine($"[CLONE] Cloned item '{ic.Value.Item.StatsName}' to slot {ic.Value.Item.Slot}, source idx {ic.Value.Item.ItemXmlNodeIdx}");
+                        System.Diagnostics.Debug.WriteLine($"[CLONE] Inserted XML length: {cloneImported.OuterXml.Length}");
+#endif
+
+                        continue;
+                    }
                     string mapKey = ic.Value.ItemTemplate.TemplateKey;
                     string stats = ic.Value.ItemTemplate.Stats;
                     string empSlot = ic.Key.ToString();
